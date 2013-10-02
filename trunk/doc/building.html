@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>Building CSI</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="index.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>Building CSI</h1>
+<hr class="half"/>
+<div class="disclaimer">
+* General disclaimer:<br/>
+* &nbsp;&nbsp;The authors make no guarantee whatsoever that CSI will build on your system.<br/>
+* &nbsp;&nbsp;This is a best-effort guide with possibly-helpful comments.
+</div>
+<h3>Build Command</h3>
+<p>To build CSI, all you should need to do is run<br/>
+<kbd class="indent">scons</kbd><br/>
+in the root directory of this release.</p>
+
+<p>The following non-standard packages are required:</p>
+<ul>
+<li><a href="http://www.llvm.org/">LLVM</a> 3.1+ with the <a href="http://clang.llvm.org/">Clang</a> front end</li>
+<li><a href="http://www.scons.org/">SCons</a></li>
+</ul>
+
+<p>To run the unit test cases for CSI, run<br/>
+<kbd class="indent">scons test</kbd><br/>
+in the root directory of this release.  The following non-standard packages are
+required:</p>
+<ul><li><a href="http://www.python.org/">Python</a> 2.6+</li></ul>
+
+<p>Having problems?  See some <a href="building_comments.html">additional
+comments</a>.</p>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="index.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

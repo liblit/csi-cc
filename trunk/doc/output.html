@@ -1,0 +1,39 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>CSI Output</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running.html">&larr; Prev</a></td>
+<td class="topnext"><a href="metadata.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>CSI Output</h1>
+<hr class="half"/>
+<h3>Executables and Object Files</h3>
+<p>Assuming the final target of <kbd>csi-cc</kbd> is either an
+executable or an object file, that file will contain all the
+information necessary to extract the information gathered by running
+the instrumented executable.  Static metadata from the instrumentation
+process can be extracted using the <kbd>extract-section</kbd> tool in
+the <samp>Tools</samp> directory of this release.  The
+<a href="metadata.html">metadata</a> page has information about extracting and
+interpreting this data for each form of instrumentation.</p>
+
+<h3>Core Dumps</h3>
+<p>When a running, instrumented program crashes, traced data must be extracted
+from the produced core dump.  The <a href="variables.html">variables</a> page
+has information about finding this data using a debugger.</p>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running.html">&larr; Prev</a></td>
+<td class="topnext"><a href="metadata.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

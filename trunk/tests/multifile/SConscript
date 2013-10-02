@@ -1,0 +1,4 @@
+Import('env')
+user = env.Object('user.c')
+definer = env.Object('definer.c')
+env.RunTest('multifile', [user, definer])
