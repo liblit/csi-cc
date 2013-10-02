@@ -1,0 +1,57 @@
+Import('env')
+
+#########################################################################
+#
+#  regression test tools
+#
+
+env = env.Clone(
+    tools=['expect',],
+    toolpath=['.', '#scons-tools'],
+    CC=env.File('#Release/csi-cc'),
+    )
+
+
+def RunTest(self, basename, objects=None):
+
+    # build
+    if not objects: objects = self.Object(basename + '.c')
+    executable, = env.Program(basename, objects)
+    self.Depends((objects, basename), (self['CC'], '#driver/driver.py', '#Release/libCSI.so'))
+
+    # extract static metadata
+    extractor = File('#Tools/extract-section')
+    checkTracker = executable.target_from_source('', '.tracker')
+    checkRT      = executable.target_from_source('', '.rt')
+    self.Command(checkTracker, (extractor, executable), '$SOURCE --require .debug_PT ${SOURCES[1]} >$TARGET')
+    self.Command(checkRT,      (extractor, executable), '$SOURCE --require .debug_CC         ${SOURCES[1]} >$TARGET')
+
+    # check static data output
+    expectPT = self.ExpectLines(checkTracker)
+    expectCC = self.ExpectRT(checkRT)
+    Alias('test', (expectPT, expectCC))
+    
+    # run execution test
+    inputFile = executable.target_from_source('', '.in')
+    outputFile = executable.target_from_source('', '.out')
+    self.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >&$TARGET')
+    expectOut = self.ExpectExact(outputFile)
+    Alias('test', expectOut)
+
+
+env.AddMethod(RunTest)
+
+
+#########################################################################
+#
+#  regression test subdirs
+#
+
+SConscript(dirs=[
+        'funcs',
+        'loop',
+        'pi',
+        'multifile',
+        'lotsofifs',
+        ],
+           exports='env')

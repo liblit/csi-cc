@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>CSI Output: Metadata</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="output.html">&larr; Prev</a></td>
+<td class="topnext"><a href="metadata_pt.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>CSI Output: Metadata</h1>
+<hr class="half"/>
+<h3>General</h3>
+<p>To extract static instrumentation metadata, use the <kbd>extract-section</kbd> tool in the
+<samp>Tools</samp> directory of this release.  This tool requires the
+following non-standard packages:</p>
+<ul><li><a href="http://www.python.org/">Python</a> 2.6+</li></ul>
+
+<p>It also requires the application <kbd>objdump</kbd>, which is
+standard on most Unix-based operating systems.</p>
+
+<h3>Path Tracing</h3>
+<p>Path Tracing metadata is stored as text in the debug
+section <samp>.debug_PT</samp> of the object file or executable.  Note
+that in the case of multiple object files linked into a single
+executable, the executable contains the complete metadata consolidated
+from all object files.  To extract this data, use a command similar
+to<br/>
+<kbd class="indent">Tools/extract-section --require .debug_PT <var>myexe</var></kbd></p>
+
+<p>For details about the format of the Path Tracing metadata, please see the
+<a href="metadata_pt.html">Path Tracing</a> page.</p>
+
+<h3>Call Coverage</h3>
+<p>Call Coverage metadata is stored as text in the debug
+section <samp>.debug_CC</samp> of the object file or executable.  Note
+that in the case of multiple object files linked into a single
+executable, the executable contains the complete metadata consolidated
+from all object files.  To extract this data, use a command similar
+to<br/>
+<kbd class="indent">Tools/extract-section --require .debug_CC <var>myexe</var></kbd></p>
+
+<p>For details about the format of the Call Coverage metadata, please see the
+<a href="metadata_cc.html">Call Coverage</a> page.</p>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="output.html">&larr; Prev</a></td>
+<td class="topnext"><a href="metadata_pt.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

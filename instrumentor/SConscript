@@ -1,0 +1,48 @@
+from SCons.Errors import StopError
+
+Import('env')
+
+if(env.get('LLVMBIN', None)):
+    env.PrependENVPath('PATH', (
+        env['LLVMBIN'],
+    ))
+
+lenv = env.Clone(
+    tools=('llvm',),
+    toolpath='.',
+    )
+
+if not lenv.GetOption('help'):
+    llvm_version = lenv['LLVM_version']
+    llvm_require = ["3.1", "3.2", "3.3"]
+    if llvm_version not in llvm_require:
+        raise StopError('LLVM %s not supported; need version in %s' % (llvm_version, str(llvm_require)))
+    lenv.ParseConfig('llvm-config --cxxflags --ldflags')
+
+lenv.AppendUnique(
+    LIBS='LLVM-$LLVM_version',
+    SHLINKFLAGS='-Wl,--no-undefined',
+    )
+
+if(lenv.get('CXX_ALT', None)):
+    lenv['CXX'] = env['CXX_ALT']
+
+
+# extra files to be included in source distributions
+File('llvm.py')
+map(Glob, (
+    '*.h',
+    '*.hpp',
+    'llvm_proxy/*.h',
+))
+
+
+########################################################################
+
+
+csiInstrumentor = lenv.SharedLibrary(
+  "CSI", ("PathNumbering.cpp", "PathTracing.cpp", "CallCoverage.cpp")
+);
+
+installed = Install('#Release', [csiInstrumentor])
+Default(installed)

@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>Running CSI: Additional Comments and Suggestions</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running.html">&larr; Prev</a></td>
+<td class="topnext"><a href="output.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>Running CSI</h1>
+<hr class="half"/>
+<h3>Additional Comments and Suggestions</h3>
+<p>The following are some suggestions regarding ways things could go wrong while
+trying to run the CSI compiler, and some additional information about
+command-line options.</p>
+
+<p>It’s fine to symlink to the <samp>csi-cc</samp> file, but you
+shouldn’t copy it out.  You can move the entire CSI directory as
+required, but the relative path between the <samp>Release</samp>
+directory and the <samp>Tools</samp> directory (and all files inside
+them) must be the same, or things won’t work.</p>
+
+<p>If you get an error like<br/>
+<samp class="indent">Error opening '/.../csi/Release/libCSI.so': libLLVM-3.X.so:
+cannot open shared object file: No such file or directory</samp><br/>
+this means that the LLVM version you built with (see
+<a href="building_comments.html">building notes</a> on LLVMBIN)
+does not match the one in your <kbd>PATH</kbd>.</p>
+
+<p>The full list of CSI-specific options is as follows</p>
+<pre>
+USAGE: csi-cc [options] {inputs}
+
+OPTIONS:
+  -path-array-size {arg}  Use {arg} as the size of path tracing arrays
+                          (Default: 10)
+  -hash-size {arg}        Use {arg} as the maximum-size function (in number of
+                          acyclic paths) to instrument for path tracing
+                          (Default: ULONG_MAX/2+1)
+  --silent                Do not print pass-specific warnings during
+                          instrumentation
+  --no-path-trace         Do not instrument for path tracing
+  --no-call-coverage      Do not instrument for call coverage
+  
+  --help                  Display this help message and exit
+  --help-clang            Display additional options (clang's help message) and
+                          exit
+
+ENVIRONMENT VARIABLES:
+  PT_INST_FUNCS           A | separated list of functions for which path tracing
+                          should be initially enabled.  The flag --no-path-trace
+                          (above) has precedence, and nullifies any information
+                          in this variable. If this environment variable does
+                          not exist, is empty, or is set to 'ALL', all functions
+                          are enabled.
+  
+  PT_ARRAY_SIZE           See -path-array-size (above).  Flags have precedence.
+  PT_HASH_SIZE            See -hash-size (above).  Flags have precedence.
+  CSI_SILENT              Enables or disables the printing of instrumentation
+                          warnings.
+                          See --silent (above).  Flags have precedence.
+  CSI_PT                  Enables or disables path tracing instrumentation.
+                          See --no-path-trace (above).  Flags have precedence.
+  CSI_CC                  Enables or disables call coverage instrumentation.
+                          See --no-call-coverage (above). Flags have precedence.
+</pre>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running.html">&larr; Prev</a></td>
+<td class="topnext"><a href="output.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

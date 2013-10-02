@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>Running CSI</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="building.html">&larr; Prev</a></td>
+<td class="topnext"><a href="output.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>Running CSI</h1>
+<hr class="half"/>
+<h3>Compiling with CSI</h3>
+<p>After your build completes, there should be a directory
+called <samp>Release</samp> in the root directory of this release.
+The program <kbd>csi-cc</kbd> will run the CSI compiler.  It emulates
+the <kbd>gcc</kbd> compiler, and accepts (nearly) all standard
+<kbd>gcc</kbd> command-line flags.  New flags add various options for
+instrumentation.  The command<br/>
+<kbd class="indent">csi-cc --help</kbd><br/>
+gives information about CSI-specific command-line flags.</p>
+
+<p>To run the CSI compiler, you need the following non-standard packages:</p>
+<ul>
+<li><a href="http://www.python.org/">Python</a> 2.6+</li>
+</ul>
+
+
+<p>Having problems?  See some <a href="running_comments.html">additional
+comments</a>.</p>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="building.html">&larr; Prev</a></td>
+<td class="topnext"><a href="output.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

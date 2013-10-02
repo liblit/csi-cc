@@ -1,0 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>Building CSI: Additional Comments and Suggestions</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="building.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>Building CSI</h1>
+<hr class="half"/>
+<h3>Additional Comments and Suggestions</h3>
+<p>The following are some suggestions regarding ways things could go wrong while
+building CSI, and some additional information about build options.</p>
+
+<p>If you want to use a different C++ compiler than your default, you can
+specify this by a command like<br/>
+<kbd class="indent">scons CXX_ALT=/path/to/COMPILER</kbd></p>
+
+<p>CSI should build nicely (squelching all warnings in the appropriate
+places) for Clang and GCC versions 4.6+.  It is unlikely to build for
+GCC versions before 4.2.</p>
+
+<p>As noted, LLVM version 3.1 or newer is required.  If LLVM is not installed
+in a standard location, you will probably have to tell scons where to find the
+bin directory of your installation.  You can do this by a command like<br/>
+<kbd class="indent">scons LLVMBIN=/path/to/LLVMBIN-DIR</kbd></p>
+
+<p>If you get an error like<br/>
+<samp class="indent">/usr/bin/ld: cannot find -lLLVM-3.X</samp><br/>
+this means that your LLVM installation isn’t built as a shared object.  This
+will likely only happen if you built LLVM from source.  Your configure command
+when building LLVM should look something like<br/>
+<kbd class="indent">configure --enable-shared</kbd></p>
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="building.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

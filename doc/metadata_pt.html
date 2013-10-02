@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>CSI Output: Metadata: Path Tracing Details</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="metadata.html">&larr; Prev</a></td>
+<td class="topnext"><a href="metadata_cc.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>CSI Output: Metadata</h1>
+<hr class="half"/>
+<h3>Path Tracing Details</h3>
+<p>Path Tracing metadata is stored as text in the debug
+section <samp>.debug_PT</samp> of the object file or executable.  Note
+that in the case of multiple object files linked into a single
+executable, the executable contains the complete metadata consolidated
+from all object files.  To extract this data, use a command similar
+to<br/>
+<kbd class="indent">Tools/extract-section --require .debug_PT <var>myexe</var></kbd></p>
+
+<p>The extracted information will contain entries for each instrumented function
+in any object file linked into the executable.  Each entry gives a
+description of the control-flow graph of the function, augmented by line
+number information and Ball/Larus instrumentation information (see
+[<a href="references.html#Ball-Larus">2</a>]).  A complete example
+(from the unit test <span class="unittest">loop</span>) is:</p>
+<pre class="indent">
+#
+rand
+1|EXIT
+0|ENTRY|5|5|5|5|5|5|5|5|-1|5
+$
+0->1|0$0
+#
+main
+3|EXIT
+2|ENTRY|9|9|9|9|9|9|9
+4|10|10|10
+5|11|11|12|12|12|12|13|13|13
+6|-1|20|20|21|21
+7|14
+8|17
+9|18|18|18|-1
+$
+2->4|0$0
+4->5|0$0
+4->6|2$2
+5->7|0$0
+5->8|1$1
+6->3|0$0
+7->9|0$0
+8->9|0$0
+9~>4|3$3
+</pre>
+
+<p>This metadata format obeys the following grammar.  <span
+class="nonterm">Non-terminals</span> are distinguished from <span
+class="term">terminals</span> by capitalization, color, and
+italics.</p>
+
+<table class="grammar">
+  <tbody>
+    <tr>
+      <td class="nonterm">Function_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Function</span> <span class="term">↵</span> <span class="nonterm">Function_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Function</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term"># ↵ fn-name ↵</span> <span class="nonterm">Block_List</span> <span class="term">↵ $ ↵</span> <span class="nonterm">Edge_List</span></td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Block_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Block</span> <span class="term">↵</span> <span class="nonterm">Block_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Block</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">block-id</span> <span class="nonterm">Block_Lines</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td><span class="term">block-id | ENTRY</span> <span class="nonterm">Block_Lines</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">block-id | EXIT</td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">block-id | NULL</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Block_Lines</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">| line-num</span> <span class="nonterm">Block_Lines</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td><span class="term">| -1</span> <span class="nonterm">Block_Lines</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Edge_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Edge</span> <span class="term">↵</span> <span class="nonterm">Edge_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Edge</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">block-id</span> <span class="nonterm">Arrow</span> <span class="term">block-id |</span> <span class="nonterm">Increment</span> $ <span class="nonterm">Weight</span></td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Arrow</td>
+      <td class="expansion">⩴</td>
+      <td class="term">-&gt;</td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">~&gt;</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Increment</td>
+      <td class="expansion">⩴</td>
+      <td><span>0</span> <span class="alternative">|</span> <span>1</span> <span class="alternative">|</span> …</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Weight</td>
+      <td class="expansion">⩴</td>
+      <td><span>0</span> <span class="alternative">|</span> <span>1</span> <span class="alternative">|</span> …</td>
+    </tr>
+  </tbody>
+</table>
+<div class="grammar">
+</div>
+
+<p>Each <span class="nonterm">Function</span> entry lists the function’s name,
+line number information for the function’s basic blocks, and instrumentation
+information for the control-flow graph edges (between basic blocks).</p>
+
+<p>The function’s name is followed by <var>N</var> <span
+class="nonterm">Block</span> entries for the <var>N</var> basic blocks in the
+function.  Each block has a
+<span class="term">block-id</span>, which is unique within the function (though
+not necessarily globally, though this is the case in the given example).  This
+id is followed by the list of line numbers for statements within that basic
+block.  The special value <span class="term">ENTRY</span> preceeds this list of
+<span class="nonterm">Block_Lines</span> for the unique function entry block. 
+The unique exit block is not allowed line numbers, and simply has the special
+value <span class="term">EXIT</span>.  If the basic block has no statements with
+line number information, the block has the special value
+<span class="term">NULL</span>.  This is not an error, and occurs often in real
+software both naturally and due to instrumentation requirements.  If the list of
+line numbers contains the sentinel value <span class="term">-1</span>, this
+basic block marks the completion of acyclic paths and writes the unqiue completed
+path value into the tracing array.</p>
+
+<p>The blocks are followed by a representation of the control-flow graph of the
+function.  Each <span class="nonterm">Edge</span> entry (from one source
+<span class="term">block-id</span> to the target
+<span class="term">block-id</span>) contains edge details and information
+about instrumentation along the edge.  If the arrow for the edge is straight
+(<span class="term">-&gt;</span>), the edge is a standard edge; if the arrow is
+formed from a tilde (<span class="term">~&gt;</span>), it is a backedge.  The
+entry also contains the edge <span class="term">increment</span> (for
+instrumentation and partial path reconstruction) and the edge
+<span class="term">weight</span> (for complete acyclic path reconstruction).  If
+the edge is a backedge, these numbers represent the reinitialization of the path
+sum.  For details, see the paper
+[<a href="references.html#Ohmann-Liblit">1</a>], and the original
+discussion of this instrumentation scheme in
+[<a href="references.html#Ball-Larus">2</a>].</p>
+
+<p>In the example above, then, the basic block in function <code>main</code>
+labeled 5 contains statements on lines 11, 12, and 13.  It is not the end of
+acyclic paths (it has no -1 in its line numbers), and has two outgoing edges.
+One edge is to block 7 with an increment (and weight) of 0, and the other is to
+block 8 with an increment (and weight) of 1.  The entire graph thus looks
+something like this:<br/>
+<img src="resources/loopgraph.png" class="center" alt="example graph"/></p>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="metadata.html">&larr; Prev</a></td>
+<td class="topnext"><a href="metadata_cc.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

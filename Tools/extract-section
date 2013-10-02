@@ -1,0 +1,61 @@
+#!/usr/bin/python -O
+
+__pychecker__ = 'no-shadowbuiltin'
+
+from collections import namedtuple
+from itertools import imap
+from subprocess import PIPE, Popen
+from sys import argv, exit, stderr, stdout
+
+
+SectionHeader = namedtuple('SectionHeader', ['index', 'name', 'size', 'vma', 'lma', 'offset', 'alignment', 'flags'])
+
+
+def main():
+    if len(argv) < 2:
+        print >>stderr, 'Usage: %s [--require] <section-name> [<executable> | <object> | <library>] ...' % argv[0]
+        exit(2)
+    else:
+        args = argv[1:]
+
+    if args[0] == '--require':
+        require = True
+        args.pop(0)
+    else:
+        require = False
+
+    desiredSection = args.pop(0)
+
+    for filename in args:
+        objdump = Popen(['objdump', '--section-headers', '--wide', filename], stdout=PIPE)
+
+        size = offset = None
+        for line in objdump.stdout:
+            fields = line.split(None, 7)
+            if len(fields) < 7: continue
+            header = SectionHeader._make(fields)
+            if header.name != desiredSection: continue
+            size = int(header.size, 16)
+            offset = int(header.offset, 16)
+            break;
+
+        if size is None and offset is None:
+            if require:
+                print >>stderr, '"%s" section is missing' % desiredSection
+                exit(1)
+            else:
+                continue
+
+        if size == 0:
+            print >>stderr, '"%s" section is empty' % desiredSection
+            continue
+
+        objectFile = open(filename, 'rb')
+        objectFile.seek(offset)
+        contents = objectFile.read(size)
+        #contents = contents.translate(None, '\0')
+        stdout.write(contents)
+
+
+if __name__ == '__main__':
+    main()

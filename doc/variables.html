@@ -1,0 +1,151 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>CSI Output: Variables</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="metadata_cc.html">&larr; Prev</a></td>
+<td class="topnext">Next &rarr;</td>
+</tr></table>
+<hr/>
+<h1>CSI Output: Variables</h1>
+<hr class="half"/>
+<h3>General</h3>
+<p>Traced information is stored in stack-local and global variables of the
+running program.  It is not written out to an external trace file.  To extract
+this information, you will need a debugger, such as
+<a href="http://www.gnu.org/software/gdb/">gdb</a>.  For further details, please
+see [<a href="references.html#Ohmann-Liblit">1</a>].</p>
+
+<h3>Path Tracing</h3>
+<p>Path Tracing data is always stack-bound.  The same variable names are used
+for all functions.</p>
+
+<p>The local variable <code>__PT_pathArr</code> exists for each instrumented
+function in the program stack.  If tracing is enabled at run time for this
+function, then <code>__PT_pathArr</code> is an array holding the
+last <var>N</var> acyclic paths taken in the particular invocation of the
+function.  The size of the array is defined when compiling
+with <kbd>csi-cc</kbd> (see <a href="running_comments.html">comments on
+running <kbd>csi-cc</kbd></a>), and defaults to 10.  The last value of
+<code>__PT_pathArr</code> is particularly important: if the last value is -1,
+then fewer than <var>N</var> acyclic paths were completed; otherwise, the
+circular array has wrapped around at least once.  If tracing is disabled, array
+entries are not meaningful.</p>
+
+<p>The local variable <code>__PT_arrIndex</code> exists for each instrumented
+function in the program stack.  If tracing is enabled at run time for this
+function, then <code>__PT_arrIndex</code> contains the index
+in <code>__PT_pathArr</code> for the <strong>next</strong> acyclic path entry.
+For example, if the value of <code>__PT_arrIndex</code> is 4, then the last
+completed acyclic path is stored in
+<code>__PT_pathArr[3]</code>.  If tracing is disabled,
+then <code>__PT_arrIndex</code> has the value -1.</p>
+
+<p>The local variable <code>__PT_curPath</code> exists for each instrumented
+function in the program stack.  If tracing is enabled at run time for this
+function, then <code>__PT_curPath</code> holds the current path sum.  Changes in
+the value of this variable are expounded in the <a href="metadata_pt.html">Path
+Tracing metadata</a> page.  This value is reset to 0 whenever an acyclic path is
+completed and written into
+<code>__PT_pathArr[__PT_arrIndex]</code>, and intialized along backedges.  If
+tracing is disabled, this value is not meaningful.</p>
+
+<div class="indent">
+<h4>Examples</h4>
+
+<p>These examples reference the control-flow graph shown to the right; <img
+src="resources/loopgraph.png" alt="example graph" style="float: right; zoom: 0.65; padding-left: 4em"/>
+this is the same example used on the
+<a href="metadata_pt.html">Path Tracing metadata</a> page.</p>
+
+<ol>
+<li><code>__PT_pathArr</code> = {1, 3, 6, 3, 2, 4, 8, 9, 2, -1}<br/>
+    <code>__PT_arrIndex</code> = 2<br/>
+    <code>__PT_curPath</code> = 4<br/>
+    <var>PC (current block)</var> = 9<br/>
+    <p>In this example, two acyclic paths have completed (1 and 3).  The path
+    sum was reinitialized along the backedge and the increment of +1 along the
+    edge 5 &rarr; 8 has executed, but the completed acyclic path ending at 9 has
+    not yet been written into <code>__PT_pathArr</code>.  Thus, the full execution
+    suffix of the function is ⟨2, 4, 5, 8, 9, 4, 5, 7, 9, 4, 5, 8, 9⟩.</p>
+</li>
+<li><code>__PT_pathArr</code> = {4, 5, 4, 4, 4, 4, 3, 4, 4, 4}<br/>
+    <code>__PT_arrIndex</code> = 2<br/>
+    <code>__PT_curPath</code> = 0<br/>
+    <var>PC (current block)</var> = 6<br/>
+    <p>In this example, more than 10 acyclic paths have completed.  The
+    completed acyclic path ending with 6 has already been written into
+    <code>__PT_pathArr[1]</code>.  Thus, the full execution suffix of the
+    function is ⟨4, 5, 8, 9, 4, 5, 8, 9, 4, 5, 8, 9, 4, 5, 8, 9, 4, 5, 7, 9, 4,
+    5, 8, 9, 4, 5, 8, 9, 4, 5, 8, 9, 4, 5, 8, 9, 4, 6⟩.</p>
+</li>
+</ol>
+</div>
+
+<div class="indent">
+<h4>Customization</h4>
+<p>Tracing of individual functions can be enabled and disabled via very simple
+binary modification of instrumented executables.  Each individual instrumented
+function has a unique global flag appearing in the <samp>__PT_func_inst</samp>
+section of the data segment.  The name for each flag is the concatenation of
+<samp>__PT_inst_</samp>, a C-legal string representing the compilation unit, and
+the function name.  For example, a function <code>foo</code> in file
+<code>bar.c</code> might have a name something like
+<samp>__PT_inst_bar_c_foo</samp>.</p>
+</div>
+
+<h3>Call Coverage</h3>
+<p>Call Coverage data for each function is stored in one local and one global
+array, both of the same size.  The arrays for local coverage information share
+the same name across different functions, and global coverage shares one array
+across all invocations of each function.</p>
+
+<p>The local variable <code>__CC_arr</code> exists for each instrumented
+function in the program stack.  The size of this array is determined by the
+number of call sites in the function.  Each entry will be either <em>true</em>
+(non-zero) or <em>false</em> (zero), indicating whether or not the call site was
+executed (so far) in the current invocation of the function.</p>
+
+<p>Each instrumented function, with name <code><var>f</var></code>, also has a
+global array with name <code>__CC_arr_<var>f</var></code>.  Again, the size of
+this array is determined by the number of call sites in the function.  Each
+entry will be either
+<em>true</em> (non-zero) or <em>false</em> (zero), indicating whether or not
+<strong>any</strong> invocation of this call site was ever executed (so far)
+across the execution of the entire program.</p>
+
+<div class="indent">
+<h4>Example</h4>
+<p>This example references the metadata from the example on the
+<a href="metadata_cc.html">Call Coverage metadata</a> page.  The example is
+given from the perspective of currently executing function <code>a</code> at
+line 18, called by function <code>b</code> at line 26, called by function
+<code>main</code> at line 36.</p>
+<p class="indent">
+<code>__CC_arr_a</code> = {1, 1, 1, 1, 1}<br/>
+<code>__CC_arr_b</code> = {0}<br/>
+<code>__CC_arr_main</code> = {1, 1, 0, 0}<br/>
+<code>__CC_arr</code> = {0, 0, 1, 0, 0}</p>
+<p>In this example, the current invocation of <code>a</code> has only completed
+the call to <code>abc</code> at line 17 (denoted by <code>__CC_arr[2]</code>).
+However, previous invocations of <code>a</code> have executed the other four
+call sites in <code>a</code> at lines 14, 18, 19, and 20 (as indicated by
+<code>__CC_arr_a</code>).  The next stack frame (not shown) would indicate that
+execution in function <code>b</code> is currently executing, but has not yet
+returned from, the call to <code>a</code> at line 26 (as indicated by
+<code>__CC_arr_b[0]</code>).</p>
+</div>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="metadata_cc.html">&larr; Prev</a></td>
+<td class="topnext">Next &rarr;</td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>
