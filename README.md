@@ -11,7 +11,7 @@ Preprint: http://pages.cs.wisc.edu/~liblit/ase-2013/ase-2013.pdf
 
 ## Current Release
 
-[`csi-cc` v1.0.0](../releases/tag/v1.0.0)
+[`csi-cc` v1.0.0](../../releases/tag/v1.0.0)
 
 ## Documentation
 
@@ -20,6 +20,6 @@ Documentation is included in the source download, or you can view the
 
 ## Changelog
 
-###[v. 1.0.0](../releases/tag/v1.0.0)
+###[v. 1.0.0](../../releases/tag/v1.0.0)
 
 Initial release.
