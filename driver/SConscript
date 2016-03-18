@@ -1,8 +1,2 @@
-from os import path
-
-Import('env')
-
-lenv = env.Clone()
-
 installed = InstallAs(target="#Release/csi-cc", source="csi-driver.py")
 Default(installed)

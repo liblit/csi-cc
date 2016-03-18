@@ -9,33 +9,54 @@ env = env.Clone(
     tools=['expect',],
     toolpath=['.', '#scons-tools'],
     CC=env.File('#Release/csi-cc'),
+    CFLAGS=(
+        '--trace=$CSI_SCHEMA',
+        '-no-filter',
+    ),
+    CSI_SCHEMA=File('../schemas/all.schema'),
     )
 
+if env['MEMCHECK']:
+    env['ENV']['OPT_WRAPPER'] = 'valgrind --tool=memcheck --error-exitcode=26 --leak-check=full'
 
-def RunTest(self, basename, objects=None):
+if 'LLVM_bindir' in env:
+    env.PrependENVPath('PATH', env['LLVM_bindir'])
 
-    # build
-    if not objects: objects = self.Object(basename + '.c')
-    executable, = env.Program(basename, objects)
-    self.Depends((objects, basename), (self['CC'], '#driver/driver.py', '#Release/libCSI.so'))
-
-    # extract static metadata
+def ExtractStatic(environ, executable, suffix):
     extractor = File('#Tools/extract-section')
-    checkTracker = executable.target_from_source('', '.tracker')
-    checkRT      = executable.target_from_source('', '.rt')
-    self.Command(checkTracker, (extractor, executable), '$SOURCE --require .debug_PT ${SOURCES[1]} >$TARGET')
-    self.Command(checkRT,      (extractor, executable), '$SOURCE --require .debug_CC         ${SOURCES[1]} >$TARGET')
+    check = executable.target_from_source('', '.csi-static-' + suffix)
+    environ.Command(check,  (extractor, executable), '$SOURCE --require .debug_' + suffix + ' ${SOURCES[1]} >$TARGET')
+    return check
 
-    # check static data output
-    expectPT = self.ExpectLines(checkTracker)
-    expectCC = self.ExpectRT(checkRT)
-    Alias('test', (expectPT, expectCC))
-    
+def RunTest(self, basename, sources=None):
+    oenv = self.Clone()
+
+    if not sources: sources = (basename + '.c',)
+    sources = map(File, sources)
+    objects = oenv.Object(sources)
+    executable, = oenv.Program(basename, objects)
+
+    oenv.Depends((objects, executable), (
+        oenv['CC'],
+        '#driver/driver.py',
+        '#Release/libCSI.so',
+        Value('MEMCHECK=%s' % oenv['MEMCHECK']),
+    ))
+    oenv.Depends(objects, oenv['CSI_SCHEMA'])
+
+    # extract and check static metadata
+    extractor = File('#Tools/extract-section')
+    for scheme in 'PT', 'CC', 'BBC', 'FC':
+        actual = executable.target_from_source('', '.csi-static-' + scheme)
+        oenv.Command(actual,  (extractor, executable), '$SOURCE --require .debug_' + scheme + ' ${SOURCES[1]} >$TARGET')
+        passed = oenv.ExpectStaticCSI(actual)
+        Alias('test', passed)
+
     # run execution test
-    inputFile = executable.target_from_source('', '.in')
+    inputFile = basename + '.in'
     outputFile = executable.target_from_source('', '.out')
-    self.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >&$TARGET')
-    expectOut = self.ExpectExact(outputFile)
+    oenv.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >&$TARGET')
+    expectOut = oenv.ExpectExact(outputFile)
     Alias('test', expectOut)
 
 
@@ -48,10 +69,12 @@ env.AddMethod(RunTest)
 #
 
 SConscript(dirs=[
+        'fnptr',
         'funcs',
         'loop',
-        'pi',
-        'multifile',
         'lotsofifs',
+        'multifile',
+        'nocallmulti',
+        'pi',
         ],
            exports='env')

@@ -16,9 +16,11 @@
 <h2>A guide for the instrumenting compiler</h2>
 <hr class="half"/>
 <h3>Summary</h3>
-<p>The CSI compiler instruments programs with two tracing strategies as described
-in [<a href="references.html#Ohmann-Liblit">1</a>]&mdash;Path Tracing and
-Callsite Coverage.</p>
+<p>The CSI compiler instruments programs with two forms of customizable tracing
+as described in
+[<a href="references.html#Ohmann-Liblit-Journal">1</a>,
+ <a href="references.html#Ohmann-Liblit">2</a>]&mdash;Path Tracing and
+Program Coverage.</p>
 <h3>Contents</h3>
 <ul class="contents">
   <li><a href="building.html">Building CSI</a><ul>
@@ -26,13 +28,14 @@ Callsite Coverage.</p>
     </ul>
   </li>
   <li><a href="running.html">Compiling with CSI</a><ul>
+    <li><a href="running_schemes.html">Tracing Schemes</a></li>
     <li><a href="running_comments.html">Comments</a></li>
     </ul>
   </li>
   <li><a href="output.html">CSI Output</a><ul>
     <li><a href="metadata.html">Metadata</a><ul>
       <li><a href="metadata_pt.html">Path Tracing</a></li>
-      <li><a href="metadata_cc.html">Call Coverage</a></li>
+      <li><a href="metadata_cc.html">Program Coverage</a></li>
       </ul></li>
     <li><a href="variables.html">Variables</a></li>
     </ul>

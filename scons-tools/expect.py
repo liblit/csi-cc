@@ -3,7 +3,7 @@
 # This script defines scons builders to compare output files.
 #====----------------------------------------------------------------------====#
 #
-# Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+# Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from SCons.Script import *
 
 import filecmp
 
-from expectcmp import read_rt
+from expectcmp import read_rt, read_pt, RTType
 
 ########################################################################
 #
@@ -42,27 +42,42 @@ def __compare_action_lines(target, source, env):
         return sorted(f1.readlines()) != sorted(f2.readlines())
     return True
 
-def __compare_action_rt(target, source, env):
+def __compare_action_cc(target, source, env):
     __pychecker__ = 'no-argsused'
     [actual, expected] = source
-    return sorted(read_rt(str(actual))) != sorted(read_rt(str(expected)))
+    return sorted(read_rt(str(actual), RTType.CC)) != sorted(read_rt(str(expected), RTType.CC))
 
+def __compare_action_bbc(target, source, env):
+    __pychecker__ = 'no-argsused'
+    [actual, expected] = source
+    return sorted(read_rt(str(actual), RTType.BBC)) != sorted(read_rt(str(expected), RTType.BBC))
+
+def __compare_action_pt(target, source, env):
+    __pychecker__ = 'no-argsused'
+    [actual, expected] = source
+    actual_pt = read_pt(str(actual))
+    expected_pt = read_pt(str(expected))
+    return any(not x.verify() for x in actual_pt) or \
+           any(not x.verify() for x in expected_pt) or \
+           sorted(actual_pt) != sorted(expected_pt)
 
 def __compare_action_show(target, source, env):
     __pychecker__ = 'no-argsused'
     [actual, expected] = source
     return 'compare "%s" and "%s"' % (actual, expected)
 
+__specialized_compare_actions = {
+    '.csi-static-BBC': __compare_action_bbc,
+    '.csi-static-FC': __compare_action_lines,
+    '.csi-static-CC': __compare_action_cc,
+    '.csi-static-CT': __compare_action_cc,
+    '.csi-static-PT': __compare_action_pt,
+}
 
-__compare_exact = Action(__compare_action_exact, __compare_action_show)
-__compare_lines = Action(__compare_action_lines, __compare_action_show)
-__compare_rt = Action(__compare_action_rt, __compare_action_show)
-
-
-__exact_action = [__compare_exact, Touch('$TARGET')]
-__lines_action = [__compare_lines, Touch('$TARGET')]
-__rt_action = [__compare_rt, Touch('$TARGET')]
-
+def __compare_action(target, source, env):
+    extension = SCons.Util.splitext(source[0].name)[1]
+    action = __specialized_compare_actions[extension]
+    return action(target, source, env)
 
 def __action_emitter(target, source, env):
     [actual] = source
@@ -70,20 +85,16 @@ def __action_emitter(target, source, env):
     return env.File(actual.name+'.passed'), [actual, expected]
 
 
+__static_builder = Builder(
+    emitter=__action_emitter,
+    action=[Action(__compare_action, __compare_action_show), Touch('$TARGET')],
+)
+
+
 __exact_builder = Builder(
-    action=__exact_action,
     emitter=__action_emitter,
-    )
-
-__lines_builder = Builder(
-    action=__lines_action,
-    emitter=__action_emitter,
-    )
-
-__rt_builder = Builder(
-    action=__rt_action,
-    emitter=__action_emitter,
-    )
+    action=[Action(__compare_action_exact, __compare_action_show), Touch('$TARGET')],
+)
 
 
 ########################################################################
@@ -92,11 +103,10 @@ __rt_builder = Builder(
 def generate(env):
     env.AppendUnique(
         BUILDERS={
+            'ExpectStaticCSI': __static_builder,
             'ExpectExact': __exact_builder,
-            'ExpectLines': __lines_builder,
-            'ExpectRT': __rt_builder,
-            },
-        )
+        },
+    )
 
 
 def exists(env):

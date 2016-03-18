@@ -1,0 +1,8 @@
+*/*.csi-static-BBC
+*/*.csi-static-CC
+*/*.csi-static-FC
+*/*.csi-static-PT
+*/*.out
+*/*.passed
+*/*.sym
+*/*.o

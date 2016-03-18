@@ -1,0 +1,40 @@
+//===----------------------- CoveragePassNames.h --------------------------===//
+//
+// Uniform storage format for names of coverage passes (and different
+// shortenings, e.g. "Function Coverage" and "FC").
+//
+//===----------------------------------------------------------------------===//
+//
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//===----------------------------------------------------------------------===//
+#ifndef CSI_COVERAGE_PASS_NAMES_H
+#define CSI_COVERAGE_PASS_NAMES_H
+
+#include <string>
+
+
+namespace csi_inst
+{
+  struct CoveragePassNames
+  {
+    const std::string lowerShort;
+    const std::string upperShort;
+    const std::string lowerFull;
+    const std::string titleFull;
+  };
+}
+
+
+#endif	// !CSI_COVERAGE_PASS_NAMES_H

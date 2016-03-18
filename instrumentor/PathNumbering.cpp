@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -140,11 +140,11 @@ std::string PPBallLarusNode::getName() {
   if(getBlock() != NULL) {
     if(getBlock()->hasName()) {
       std::string tempName(getBlock()->getName());
-      name << tempName.c_str() << " (" << _uid << ")";
+      name << tempName.c_str() << " (" << _uid << ')';
     } else
-      name << "<unnamed> (" << _uid << ")";
+      name << "<unnamed> (" << _uid << ')';
   } else
-    name << "<null> (" << _uid << ")";
+    name << "<null> (" << _uid << ')';
 
   return name.str();
 }
@@ -268,10 +268,10 @@ void PPBallLarusDag::calculatePathNumbers() {
   std::queue<PPBallLarusNode*> bfsQueue;
   bfsQueue.push(getExit());
 
-  while(bfsQueue.size() > 0) {
+  while(!bfsQueue.empty()) {
     node = bfsQueue.front();
 
-    DEBUG(dbgs() << "calculatePathNumbers on " << node->getName() << "\n");
+    DEBUG(dbgs() << "calculatePathNumbers on " << node->getName() << '\n');
 
     bfsQueue.pop();
     unsigned long prevPathNumber = node->getNumberPaths();
@@ -281,7 +281,7 @@ void PPBallLarusDag::calculatePathNumbers() {
     //if( node->getNumberPaths() > 100000000 && node != getRoot() ) {
     if (node->getNumberPaths() > (ULONG_MAX / 4) && node != getRoot()){
       DEBUG(dbgs() << "WARNING: DAG splitting occurred for function "
-                   << getFunction().getName().str() << "\n");
+                   << getFunction().getName().str() << '\n');
       
       // Add new phony edge from the split-node to the DAG's exit
       PPBallLarusEdge* exitEdge = addEdge(node, getExit(), 0);
@@ -321,7 +321,7 @@ void PPBallLarusDag::calculatePathNumbers() {
           << node->getNumberPaths() << ".\n");
 
     if(prevPathNumber == 0 && node->getNumberPaths() != 0) {
-      DEBUG(dbgs() << "node ready : " << node->getName() << "\n");
+      DEBUG(dbgs() << "node ready : " << node->getName() << '\n');
       for(PPBLEdgeIterator pred = node->predBegin(), end = node->predEnd();
           pred != end; pred++) {
         if( (*pred)->getType() == PPBallLarusEdge::BACKEDGE ||
@@ -336,7 +336,7 @@ void PPBallLarusDag::calculatePathNumbers() {
     }
   }
 
-  DEBUG(dbgs() << "\tNumber of paths: " << getRoot()->getNumberPaths() << "\n");
+  DEBUG(dbgs() << "\tNumber of paths: " << getRoot()->getNumberPaths() << '\n');
 }
 
 // Returns the number of paths for the Dag.

@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@
 //===----------------------------------------------------------------------===//
 #include "../Versions.h"
 
-#if LLVM_3_1
+#if LLVM_VERSION < 30200
   #include <llvm/Support/TypeBuilder.h>
-#elif LLVM_3_2
+#elif LLVM_VERSION < 30300
   #include <llvm/TypeBuilder.h>
-#elif LLVM_3_3
+#else
   #include <llvm/IR/TypeBuilder.h>
 #endif

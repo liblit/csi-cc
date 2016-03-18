@@ -9,7 +9,7 @@
 //  http://portal.acm.org/citation.cfm?id=243857
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,26 +33,28 @@
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "path-tracing"
 
+#include "BBCoverage.h"
 #include "PathTracing.h"
-
-#include "Versions.h"
+#include "PrepareCSI.h"
+#include "Utils.hpp"
 
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Support/Debug.h>
-#include <llvm/Support/InstIterator.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
+#include "Versions.h"
+#include "llvm_proxy/DIBuilder.h"
 #include "llvm_proxy/Module.h"
+#include "llvm_proxy/InstIterator.h"
 #include "llvm_proxy/IntrinsicInst.h"
 
 #include <climits>
+#include <iostream>
 #include <list>
 #include <set>
-#include <iostream>
-
-#include <llvm/Support/CommandLine.h>
 
 using namespace csi_inst;
 using namespace llvm;
@@ -98,7 +100,7 @@ static cl::opt<int> ArraySize("pt-path-array-size", cl::desc("Set the size "
                                   "functions.  Default: 10"),
                                   cl::value_desc("path_array_size"));
 
-static cl::opt<string> TrackerFile("pt-tracker-file", cl::desc("The path to "
+static cl::opt<string> TrackerFile("pt-info-file", cl::desc("The path to "
                                    "the increment-line-number output file."),
                                    cl::value_desc("file_path"));
 
@@ -326,7 +328,7 @@ void BLInstrumentationDag::splitUpdate(BLInstrumentationEdge* formerEdge,
 // implementation does not try to minimize the instrumentation overhead
 // by trying to find hot edges.
 void BLInstrumentationDag::calculateSpanningTree() {
-  std::stack<PPBallLarusNode*> dfsStack;
+  stack<PPBallLarusNode*> dfsStack;
 
   for(PPBLNodeIterator nodeIt = _nodes.begin(), end = _nodes.end();
       nodeIt != end; nodeIt++) {
@@ -334,7 +336,7 @@ void BLInstrumentationDag::calculateSpanningTree() {
   }
 
   dfsStack.push(getRoot());
-  while(dfsStack.size() > 0) {
+  while(!dfsStack.empty()) {
     PPBallLarusNode* node = dfsStack.top();
     dfsStack.pop();
 
@@ -443,7 +445,7 @@ Value* BLInstrumentationNode::getStartingPathNumber(){
 void BLInstrumentationNode::setStartingPathNumber(Value* pathNumber) {
   DEBUG(dbgs() << "  SPN-" << getName() << " <-- " << (pathNumber ?
                                                        pathNumber->getName() :
-                                                       "unused") << "\n");
+                                                       "unused") << '\n');
   _startingPathNumber = pathNumber;
 }
 
@@ -453,7 +455,7 @@ Value* BLInstrumentationNode::getEndingPathNumber(){
 
 void BLInstrumentationNode::setEndingPathNumber(Value* pathNumber) {
   DEBUG(dbgs() << "  EPN-" << getName() << " <-- "
-               << (pathNumber ? pathNumber->getName() : "unused") << "\n");
+               << (pathNumber ? pathNumber->getName() : "unused") << '\n');
   _endingPathNumber = pathNumber;
 }
 
@@ -624,13 +626,14 @@ void PathTracing::insertCounterIncrement(Value* incValue,
   // Counter increment for array
   if( dag->getNumberOfPaths() <= HASH_THRESHHOLD ) {
     // Get pointer to the array location
-    std::vector<Value*> gepIndices(2);
-    gepIndices[0] = Constant::getNullValue(Type::getInt64Ty(*Context));
-    gepIndices[1] = curLoc;
+    Value * const gepIndices[] = {
+      Constant::getNullValue(Type::getInt64Ty(*Context)),
+      curLoc,
+    };
 
     GetElementPtrInst* pcPointer =
-      GetElementPtrInst::Create(dag->getCounterArray(), gepIndices,
-                                "arrLoc", insertPoint);
+      GetElementPtrInst::CreateInBounds(dag->getCounterArray(), gepIndices,
+					"arrLoc", insertPoint);
 
     // Store back in to the array
     new StoreInst(incValue, pcPointer, true, insertPoint);
@@ -830,8 +833,9 @@ bool PathTracing::splitCritical(BLInstrumentationEdge* edge,
 
 
 // NOTE: could handle inlining specially here if desired.
-void writeBBLineNums(BasicBlock* bb, BLInstrumentationDag* dag,
-                     ostream& stream = cout){
+static void writeBBLineNums(BasicBlock* bb,
+			    BLInstrumentationDag* dag,
+			    raw_ostream& stream = outs()){
   if(!bb){
     stream << "|NULL";
     return;
@@ -846,7 +850,7 @@ void writeBBLineNums(BasicBlock* bb, BLInstrumentationDag* dag,
     
     dbLoc = i->getDebugLoc();
     if(!dbLoc.isUnknown()){
-      stream << "|" << dbLoc.getLine(); // << ":" << dbLoc.getCol();
+      stream << '|' << dbLoc.getLine(); // << ':' << dbLoc.getCol();
       any = true;
     }
     else if(LoadInst* inst = dyn_cast<LoadInst>(&*i)){
@@ -863,6 +867,13 @@ void writeBBLineNums(BasicBlock* bb, BLInstrumentationDag* dag,
     stream << "|NULL";
 }
 
+
+static void writeBBLineNums(BasicBlock* bb, BLInstrumentationDag* dag, ostream& stream){
+  raw_os_ostream wrapped(stream);
+  writeBBLineNums(bb, dag, wrapped);
+}
+
+
 void PathTracing::writeBBs(Function& F, BLInstrumentationDag* dag){
   BLInstrumentationEdge* root = (BLInstrumentationEdge*)dag->getExitRootEdge();
   list<BLInstrumentationEdge*> edgeWl;
@@ -871,7 +882,7 @@ void PathTracing::writeBBs(Function& F, BLInstrumentationDag* dag){
   
   // special handling here for exit node (mark as "EXIT")
   BLInstrumentationNode* exitNode = (BLInstrumentationNode*)root->getSource();
-  _trackerStream << exitNode->getNodeId() << "|EXIT" << endl;
+  trackerStream << exitNode->getNodeId() << "|EXIT" << '\n';
   if(exitNode->getBlock()){
     errs() << "ERROR: Exit node has associated basic block in function "
            << F.getName() << ".  This is a tool error.\n";
@@ -881,9 +892,9 @@ void PathTracing::writeBBs(Function& F, BLInstrumentationDag* dag){
   
   // special handling here for entry node (mark as "ENTRY" but also write line#)
   BLInstrumentationNode* entryNode = (BLInstrumentationNode*)root->getTarget();
-  _trackerStream << entryNode->getNodeId() << "|ENTRY";
-  writeBBLineNums(entryNode->getBlock(), dag, _trackerStream);
-  _trackerStream << endl;
+  trackerStream << entryNode->getNodeId() << "|ENTRY";
+  writeBBLineNums(entryNode->getBlock(), dag, trackerStream);
+  trackerStream << '\n';
   for(PPBLEdgeIterator i = entryNode->succBegin(), e = entryNode->succEnd(); i != e; ++i){
     edgeWl.push_back((BLInstrumentationEdge*)(*i));
   }
@@ -896,9 +907,9 @@ void PathTracing::writeBBs(Function& F, BLInstrumentationDag* dag){
     if(done.count(current))
       continue;
     
-    _trackerStream << current->getNodeId();
-    writeBBLineNums(current->getBlock(), dag, _trackerStream);
-    _trackerStream << endl;
+    trackerStream << current->getNodeId();
+    writeBBLineNums(current->getBlock(), dag, trackerStream);
+    trackerStream << '\n';
     
     for(PPBLEdgeIterator i = current->succBegin(), e = current->succEnd(); i != e; ++i){
       edgeWl.push_back((BLInstrumentationEdge*)(*i));
@@ -909,10 +920,10 @@ void PathTracing::writeBBs(Function& F, BLInstrumentationDag* dag){
 }
 
 void PathTracing::writeTrackerInfo(Function& F, BLInstrumentationDag* dag){
-  _trackerStream << "#" << endl << F.getName().str() << endl;
+  trackerStream << "#\n" << F.getName().str() << '\n';
   
   writeBBs(F, dag);
-  _trackerStream << "$" << endl;
+  trackerStream << "$\n";
   
   BLInstrumentationEdge* root = (BLInstrumentationEdge*)dag->getExitRootEdge();
   list<BLInstrumentationEdge*> edgeWl;
@@ -938,15 +949,15 @@ void PathTracing::writeTrackerInfo(Function& F, BLInstrumentationDag* dag){
        current->getType() == PPBallLarusEdge::SPLITEDGE){
       BLInstrumentationEdge* phony =
          (BLInstrumentationEdge*)current->getPhonyRoot();
-      _trackerStream << source->getNodeId() << "~>" << target->getNodeId()
-                     << "|" << phony->getIncrement()
-                     << "$" << phony->getWeight() << endl;
+      trackerStream << source->getNodeId() << "~>" << target->getNodeId()
+                     << '|' << phony->getIncrement()
+                     << '$' << phony->getWeight() << '\n';
     }
     else{
-      _trackerStream << source->getNodeId() << "->" << target->getNodeId()
-                     << "|" << current->getIncrement()
-                     << "$" << current->getWeight()
-                     << endl;
+      trackerStream << source->getNodeId() << "->" << target->getNodeId()
+                     << '|' << current->getIncrement()
+                     << '$' << current->getWeight()
+                     << '\n';
     }
     
     for(PPBLEdgeIterator i = target->succBegin(), e = target->succEnd(); i != e; ++i){
@@ -962,22 +973,10 @@ void PathTracing::writeTrackerInfo(Function& F, BLInstrumentationDag* dag){
 
 // Entry point of the function
 bool PathTracing::runOnFunction(Function &F) {
-  if (F.isDeclaration())
+  PrepareCSI& instData = getAnalysis<PrepareCSI>();
+  if(F.isDeclaration() || !instData.hasInstrumentationType(F, "PT"))
     return false;
-  DEBUG(dbgs() << "Function: " << F.getName() << "\n");
-  
-  // clone the function to keep non-instrumented version
-  ValueToValueMapTy valueMap;
-  Function* newF = CloneFunction(&F, valueMap, false, NULL);
-  newF->setName("__PT_" + F.getName());
-      
-  ValueToValueMapTy argsValueMap;
-  for(Function::arg_iterator i = F.getArgumentList().begin(), e = F.getArgumentList().end(); i != e; ++i){
-    argsValueMap[valueMap.lookup(&*i)] = i;
-  }
-  
-  // in case we don't instrument, clear the clone-mapping right away
-  this->oldToNewCallMap.clear();
+  DEBUG(dbgs() << "Function: " << F.getName() << '\n');
   
   // Build DAG from CFG
   BLInstrumentationDag dag = BLInstrumentationDag(F);
@@ -1021,13 +1020,13 @@ bool PathTracing::runOnFunction(Function &F) {
     new StoreInst(ConstantInt::get(tInt, 0), trackInst, true, entryInst);
     
     // Store the setinal value (-1) into pathArr[end]
-    std::vector<Value*> gepIndices(2);
-    gepIndices[0] = Constant::getNullValue(Type::getInt64Ty(*Context));
-    gepIndices[1] = ConstantInt::get(tInt, PATHS_SIZE-1);
-    GetElementPtrInst* arrLast = GetElementPtrInst::Create(arrInst, gepIndices,
-                                                           "arrLast", entryInst);
-    StoreInst* setinalEnd = new StoreInst(ConstantInt::get(tInt, -1), arrLast,
-                                          true, entryInst);
+    Value * const gepIndices[] = {
+      Constant::getNullValue(Type::getInt64Ty(*Context)),
+      ConstantInt::get(tInt, PATHS_SIZE-1),
+    };
+    GetElementPtrInst* arrLast = GetElementPtrInst::CreateInBounds(arrInst, gepIndices,
+								   "arrLast", entryInst);
+    new StoreInst(ConstantInt::get(tInt, -1), arrLast, true, entryInst);
     
     dag.setCounterArray(arrInst);
     dag.setCurIndex(idxInst);
@@ -1035,191 +1034,65 @@ bool PathTracing::runOnFunction(Function &F) {
     this->setPathTracker(trackInst);
     
     // create debug info for new variables
-    DIType intType = Builder->createBasicType("__pt_int", 64, 64, 5);
-    Value* subscript = Builder->getOrCreateSubrange(0, PATHS_SIZE-1);
-    DIArray subscriptArray = Builder->getOrCreateArray(subscript);
-    DIType arrType = Builder->createArrayType(PATHS_SIZE*64, 64, intType, 
-                                              subscriptArray);
+    DIBuilder Builder(*F.getParent());
+    DIType intType = Builder.createBasicType("__pt_int", 64, 64, dwarf::DW_ATE_signed);
+    const DIType arrType = createArrayType(Builder, PATHS_SIZE, intType);
     
     // get the debug location of any instruction in this basic block--this will
     // use the same info.  If there is none, technically we should build it, but
     // that's a huge pain (if it's possible) so I just give up right now
-    BasicBlock* entryBB = entryInst->getParent();
-    DebugLoc dbLoc;
-    for(BasicBlock::iterator i = entryBB->begin(), e = entryBB->end(); i != e; ++i){
-      dbLoc = i->getDebugLoc();
-      if(!dbLoc.isUnknown())
-        break;
-    }
-    if(dbLoc.isUnknown()){
-      // try again iterating through the entire function...
-      for(inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i){
-        dbLoc = i->getDebugLoc();
-        if(!dbLoc.isUnknown())
-          break;
-      }
-      
-      if(dbLoc.isUnknown() && !SilentInternal){
-        errs() << "WARNING: there will be no debug locations for instrumented "
-               << "function "+F.getName()+" . Traced paths will likely "
-               << "be unextractable!\n";
-      }
-      else if(!SilentInternal){
-        DEBUG(dbgs() << "WARNING: debug location outside of entry block used "
-                     << "for instrumented function "+F.getName()+"\n");
-      }
-    }
-    else{
-      DIVariable arrDI = Builder->createLocalVariable(
+    const DebugLoc dbLoc = findEarlyDebugLoc(F, SilentInternal);
+    if (!dbLoc.isUnknown()) {
+      DIVariable arrDI = Builder.createLocalVariable(
                             (unsigned)dwarf::DW_TAG_auto_variable,
                             DIDescriptor(dbLoc.getScope(*Context)),
                             "__PT_counter_arr",
                             DIFile(dbLoc.getScope(*Context)), 0, arrType, true);
-      Instruction* declareArr = Builder->insertDeclare(arrInst, arrDI, entryInst);
-      declareArr->setDebugLoc(dbLoc);
-      DIVariable idxDI = Builder->createLocalVariable(
+      insertDeclare(Builder, arrInst, arrDI, dbLoc, entryInst);
+      DIVariable idxDI = Builder.createLocalVariable(
                             (unsigned)dwarf::DW_TAG_auto_variable,
                             DIDescriptor(dbLoc.getScope(*Context)),
                             "__PT_counter_idx",
                             DIFile(dbLoc.getScope(*Context)), 0, intType, true);
-      Instruction* declareIdx = Builder->insertDeclare(idxInst, idxDI, entryInst);
-      declareIdx->setDebugLoc(dbLoc);
-      DIVariable trackDI = Builder->createLocalVariable(
+      insertDeclare(Builder, idxInst, idxDI, dbLoc, entryInst);
+      DIVariable trackDI = Builder.createLocalVariable(
                              (unsigned)dwarf::DW_TAG_auto_variable,
                              DIDescriptor(dbLoc.getScope(*Context)),
                              "__PT_current_path",
                              DIFile(dbLoc.getScope(*Context)), 0, intType,
                              true);
-      Instruction* declareTrack = Builder->insertDeclare(trackInst, trackDI, entryInst);
-      declareTrack->setDebugLoc(dbLoc);
+      insertDeclare(Builder, trackInst, trackDI, dbLoc, entryInst);
     }
     
     // do the instrumentation and write out the path info to the .info file
     insertInstrumentation(dag);
     
     writeTrackerInfo(F, &dag);
-    
-    // clone the original body back in
-    SmallVector<ReturnInst*, 0> returns;
-    CloneFunctionInto(&F, newF, argsValueMap, false, returns, "", NULL, NULL);
-    
-    // and set up the trampoline
-    Type* tBool = Type::getInt8Ty(*Context);
-    BasicBlock* oldEntry =
-       cast<BasicBlock>(argsValueMap[&(newF->getEntryBlock())]);
-    BasicBlock* curEntry = &(F.getEntryBlock());
-    BasicBlock* newEntry = BasicBlock::Create(*Context, "newEntry", &F,
-                                              &F.getEntryBlock());
-    LoadInst* flag = new LoadInst(funcInstMap[&F], "instFlag", newEntry);
-    ICmpInst* isInst = new ICmpInst(*newEntry, CmpInst::ICMP_NE, flag,
-                                    ConstantInt::get(tBool, 0), "isInst");
-    BranchInst::Create(curEntry, oldEntry, isInst, newEntry);
-    
-    // find last alloca instruction, include everything prior so the debug
-    // info for local vars works
-    list<Instruction*> toMove;
-    list<Instruction*> possibleMove;
-    for(BasicBlock::iterator i = curEntry->begin(), e = curEntry->end(); i != e; ++i){
-      if(i != (void*)setinalEnd)
-        possibleMove.push_back(&*i);
-      
-      if(dyn_cast<AllocaInst>(i)){
-        toMove.splice(toMove.end(), possibleMove);
-        possibleMove.clear();
-      }
-    }
-    for(list<Instruction*>::iterator i = toMove.begin(), e = toMove.end(); i != e; ++i){
-      (*i)->moveBefore(flag);
-      // remove the old version in old entry
-      Value* origInst = argsValueMap[valueMap[*i]];
-      if(origInst){
-        Instruction* oldInst = dyn_cast<Instruction>(origInst);
-        oldInst->replaceAllUsesWith(*i);
-        oldInst->eraseFromParent();
-      }
-    }
-    
-    // then delete all remaining duplicate dbg.declare instrinsics
-    set<Instruction*> toRemove;
-    for (BasicBlock::iterator i = oldEntry->begin(), e = oldEntry->end(); i != e; ++i){
-      if(DbgDeclareInst* inst = dyn_cast<DbgDeclareInst>(&*i))
-        toRemove.insert(inst);
-    }
-    for(set<Instruction*>::iterator i = toRemove.begin(), e = toRemove.end(); i != e; ++i)
-      (*i)->eraseFromParent();
-    
-    // don't forget to make the array size -1 for uninst (alleviating the
-    // need for asprin when looking at debug info)
-    new StoreInst(ConstantInt::get(tInt, -1), idxInst, true,
-                  oldEntry->getFirstNonPHI());
-    
-    // build the call map for future (call coverage) instrumentation
-    this->oldToNewCallMap.clear();
-    for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i){
-      if(CallInst* theCall = dyn_cast<CallInst>(&*i)){
-        if(theCall->getCalledFunction() &&
-           theCall->getCalledFunction()->isIntrinsic())
-          continue;
-        Value* origInst = argsValueMap[valueMap[theCall]];
-        if(!origInst){
-          // if the value isn't mapped to, it is, itself, a copied value
-          // NOTE: we could add another map to check this at run-time every
-          // time, if fear arises
-          continue;
-        }
-        Instruction* oldInst = dyn_cast<Instruction>(origInst);
-        this->oldToNewCallMap[oldInst] = theCall;
-      }
-    }
-    
-    // get rid of the copied function body
-    newF->deleteBody();
   }
-  else{
-    // build the call map for future (call coverage) instrumentation
-    // note the values will be NULL because there is no body copy
-    this->oldToNewCallMap.clear();
-    for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i){
-      if(CallInst* theCall = dyn_cast<CallInst>(&*i)){
-        if(theCall->getCalledFunction() &&
-           theCall->getCalledFunction()->isIntrinsic())
-          continue;
-        this->oldToNewCallMap[theCall] = NULL;
-      }
-    }
-    
-    if(!SilentInternal){
-      errs() << "WARNING: instrumentation not done for function "
-             << F.getName() << " due to large path count.  Path info "
-             << "will be missing!\n";
-    }
-    newF->deleteBody();
+  else if(!SilentInternal){
+    errs() << "WARNING: instrumentation not done for function "
+           << F.getName() << " due to large path count.  Path info "
+           << "will be missing!\n";
     return false;
   }
   
   return true;
 }
 
-// Output the bitcode if we want to observe instrumentation changess
-#define PRINT_MODULE dbgs() <<                               \
-  "\n\n============= MODULE BEGIN ===============\n" << M << \
-  "\n============== MODULE END ================\n"
-
-bool PathTracing::doInitialization(Module& M){
-  if(TrackerFile == ""){
-    cerr << "ERROR: PT cannot continue. -pt-tracker-file [file] is required.\n";
-    exit(1);
-  }
-  _trackerStream.open(TrackerFile.c_str(), ios::out | ios::trunc);
-  if(!_trackerStream.is_open()){
-    cerr << "ERROR: unable to open pt-file location: " << TrackerFile << endl;
-    exit(2);
-  }
-  else
-    DEBUG(string("Output stream opened to ") + TrackerFile.c_str());
+bool PathTracing::runOnModule(Module& M){
+  static bool runBefore = false;
+  if(runBefore)
+    return(false);
+  runBefore = true;
   
-  Context = &M.getContext();
-  Builder = new DIBuilder(M);
+  if(TrackerFile.empty())
+    report_fatal_error("PT cannot continue: -pt-tracker-file [file] is required", false);
+  trackerStream.open(TrackerFile.c_str(), ios::out | ios::trunc);
+  if(!trackerStream.is_open())
+    report_fatal_error("unable to open pt-file location: " + TrackerFile);
+  DEBUG(dbgs() << "Output stream opened to " << TrackerFile << '\n');
+  
+  this->Context = &M.getContext();
   
   if(ArraySize > 0)
     PATHS_SIZE = ArraySize;
@@ -1230,54 +1103,33 @@ bool PathTracing::doInitialization(Module& M){
   else
     HASH_THRESHHOLD = ULONG_MAX / 2 - 1;
   
-  string funcsToInst = "";
-  bool instAllFuncs = false;
-  char* envFuncs = getenv("PT_INST_FUNCS");
-  if(!envFuncs || strlen(envFuncs) == 0 || !strcmp(envFuncs, "ALL")){
-    instAllFuncs = true;
+  bool changed = false;
+  for(Module::iterator i = M.begin(), e = M.end(); i != e; ++i){
+    changed |= runOnFunction(*i);
   }
-  else{
-    funcsToInst = '|' + string(envFuncs) + '|';
-  }
-  DEBUG("Instrumenting functions: " + (instAllFuncs ? "ALL" : funcsToInst));
   
-  // insert the globals to decide whether to use the instrumented version of
-  // each function or not in special section __PT_func_inst
-  Type* tInt = Type::getInt8Ty(*Context);
-  for(Module::iterator F = M.begin(), e = M.end(); F != e; ++F){
-    if(F->isDeclaration() || F->getName().substr(0, 5).equals("__PT_"))
-      continue;
-    
-    string mName = M.getModuleIdentifier();
-    size_t mDot = mName.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890");
-    while(mDot != string::npos){
-      mName.replace(mDot, 1, "_");
-      mDot = mName.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890");
-    }
-    Twine globalName = "__PT_inst_"+StringRef(mName)+"_"+F->getName();
-    GlobalVariable* functionGlobal;
-    if(instAllFuncs ||
-       funcsToInst.find("|" + F->getName().str() + "|") != string::npos){
-      functionGlobal = new GlobalVariable(M, tInt, true,
-         GlobalValue::ExternalLinkage, ConstantInt::get(tInt, 1), globalName);
-    }
-    else{
-      functionGlobal = new GlobalVariable(M, tInt, true,
-         GlobalValue::ExternalLinkage, ConstantInt::get(tInt, 0), globalName);
-    }
-    functionGlobal->setSection("__PT_func_inst");
-    funcInstMap[F] = functionGlobal;
-  }
-
-  return true;
+  trackerStream.close();
+  return changed;
 }
 
-bool PathTracing::doFinalization(Module& M){
-  (void)M; // suppress warning
-  
-  // close tracking stream if open
-  if(_trackerStream.is_open())
-    _trackerStream.close();
-  
-  return false;
+// Output the bitcode if we want to observe instrumentation changess
+#define PRINT_MODULE dbgs() <<                               \
+  "\n\n============= MODULE BEGIN ===============\n" << M << \
+  "\n============== MODULE END ================\n"
+
+void PathTracing::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<PrepareCSI>();
+  AU.addPreserved<PrepareCSI>();
+
+  // enforce that PT runs after BBC
+  // this is horribly ugly but now necessary for two reasons:
+  // (1) optimization uses the dominator tree, and PT modifies the CFG
+  // (2) since PT modifies the CFG, the number of BBs changes, and thus so
+  //     does the BBC array size
+  // it gets worse: this is the reason that we have to now prevent a pass from
+  //                running twice (which always could happen, but never did)
+  // NOTE: if any other requirements are added (e.g. that CC also runs before
+  //       PT) a crash ensues.  Well played LLVM; well played.
+  AU.addRequired<BBCoverage>();
+  AU.addPreserved<BBCoverage>();
 }

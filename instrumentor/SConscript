@@ -1,31 +1,48 @@
-from SCons.Errors import StopError
-
 Import('env')
 
-if(env.get('LLVMBIN', None)):
-    env.PrependENVPath('PATH', (
-        env['LLVMBIN'],
-    ))
-
 lenv = env.Clone(
-    tools=('llvm',),
-    toolpath='.',
-    )
+    tools=(
+        'clang-analyzer',
+    ),
+    toolpath=(
+        '#scons-tools',
+    ),
+    INCPREFIX='-isystem ',
+)
 
 if not lenv.GetOption('help'):
     llvm_version = lenv['LLVM_version']
-    llvm_require = ["3.1", "3.2", "3.3"]
-    if llvm_version not in llvm_require:
-        raise StopError('LLVM %s not supported; need version in %s' % (llvm_version, str(llvm_require)))
-    lenv.ParseConfig('llvm-config --cxxflags --ldflags')
+    if not '3.1' <= llvm_version < '3.6':
+        from SCons import Warnings
+        class LLVMVersionWarning(Warning): pass
+        Warnings.enableWarningClass(LLVMVersionWarning)
+        Warnings.warn(LLVMVersionWarning, 'untested using LLVM %s; recommend LLVM 3.1 through 3.5.x' % llvm_version)
+    lenv.ParseConfig('$LLVM_CONFIG --cxxflags --ldflags')
 
-lenv.AppendUnique(
-    LIBS='LLVM-$LLVM_version',
-    SHLINKFLAGS='-Wl,--no-undefined',
+    import SCons
+    if lenv._get_major_minor_revision(SCons.__version__) < (2, 1, 0):
+        for flag in lenv['CFLAGS']:
+            if flag.startswith('-std=c++'):
+                lenv.AppendUnique(CXXFLAGS=flag)
+
+lenv.PrependUnique(
+    LIBS='LLVM-$LLVM_version${("", "svn")[LLVM_version == "3.2"]}',
     )
 
 if(lenv.get('CXX_ALT', None)):
     lenv['CXX'] = env['CXX_ALT']
+
+matchedGcc = {
+    '3.1': '4.9.0',
+    '3.2': '4.9.0',
+    '3.3': '4.9.0',
+    '3.4': '4.8.2',
+    '3.5': '4.8.3',
+    '3.6': '5.1.0',
+}.get(str(lenv.get('LLVM_version')))
+
+if matchedGcc:
+    lenv.PrependENVPath('PATH', '/s/gcc-%s/bin' % matchedGcc)
 
 
 # extra files to be included in source distributions
@@ -40,9 +57,46 @@ map(Glob, (
 ########################################################################
 
 
-csiInstrumentor = lenv.SharedLibrary(
-  "CSI", ("PathNumbering.cpp", "PathTracing.cpp", "CallCoverage.cpp")
-);
+sources = [
+    "BBCoverage.cpp",
+    "CallCoverage.cpp",
+    "CoveragePass.cpp",
+    "ExtrinsicCalls.cpp",
+    "FuncCoverage.cpp",
+    "InfoFileOption.cpp",
+    "InstrumentationData.cpp",
+    "LocalCoveragePass.cpp",
+    "PathNumbering.cpp",
+    "PathTracing.cpp",
+    "PrepareCSI.cpp",
+    "SilentInternalOption.cpp",
+    "Utils.cpp",
+]
 
-installed = Install('#Release', [csiInstrumentor])
-Default(installed)
+csiInstrumentor, = lenv.SharedLibrary('#Release/CSI', sources)
+
+
+########################################################################
+#
+#  compilation database for use with various Clang LibTooling tools
+#
+
+
+import json
+
+def compilation_database(env, topdir):
+    for obj in csiInstrumentor.sources:
+        src, = obj.sources
+        yield {
+            'directory': topdir,
+            'file': src.path,
+            'command': env.subst('$SHCXXCOM', target=obj, source=src),
+        }
+
+def stash_compile_commands(target, source, env):
+    topdir, sconscripts = source[0], source[1:]
+    target, = target
+    commands = list(compilation_database(env, topdir.read()))
+    json.dump(commands, open(str(target), 'w'), indent=2)
+
+lenv.Command('compile_commands.json', (Value(Dir('#').abspath), '#SConstruct', 'SConscript'), stash_compile_commands)

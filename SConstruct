@@ -3,18 +3,38 @@
 #  configurable options
 #
 
+from os import access, environ, X_OK
+
+def pathIsExecutable(key, val, env):
+    found = env.WhereIs(val)
+    if found: val = found
+    PathVariable.PathIsFile(key, val, env)
+    if not access(val, X_OK):
+        raise SCons.Errors.UserError('Path for option %s is not executable: %s' % (key, val))
+
+    
 opts = Variables('.scons-config', ARGUMENTS)
 opts.AddVariables(
-    PathVariable(key='LLVMBIN',
-                 help='location of bin directory of LLVM installation',
-                 default=None,
-                 validator=PathVariable.PathIsDir),
+    PathVariable(key='LLVM_CONFIG',
+                 help='path to llvm-config executable for LLVM installation',
+                 default=WhereIs('llvm-config'),
+                 validator=pathIsExecutable),
     PathVariable(key='CXX_ALT',
                  help='path to alternate C++ compiler',
                  default=None,
-                 validator=PathVariable.PathIsFile),
-    )
-env = Environment(options=opts)
+                 validator=pathIsExecutable),
+    BoolVariable(key='DEBUG',
+                 help='Compile with extra information for debugging',
+                 default=False),
+    BoolVariable(key='MEMCHECK',
+                 help="Run instrumentor tests under Valgrind's memcheck tool",
+                 default=False),
+)
+env = Environment(
+    options=opts,
+    tools=('default', 'llvm'),
+    toolpath=('instrumentor',),
+)
 opts.Save('.scons-config', env)
 
 ########################################################################
@@ -23,7 +43,7 @@ opts.Save('.scons-config', env)
 #
 
 CacheDir('.scons-cache')
-SetOption('implicit_cache', True)
+#SetOption('implicit_cache', True)
 SetOption('max_drift', 1)
 
 
@@ -38,6 +58,7 @@ env = env.Clone(
         '-Wextra',
         '-Werror',
         '-Wformat=2',
+        '${("", "-g")[DEBUG]}',
     ),
 )
 
@@ -58,6 +79,8 @@ SConscript(dirs=[
     'driver',
     'tests',
 ])
+
+Default('Release')
 
 
 ########################################################################
@@ -87,4 +110,4 @@ package = env.Package(
     source=sources,
 )[0]
 
-AddPostAction(package, [Chmod('$TARGET', 0644)])
+AddPostAction(package, Chmod('$TARGET', 0644))

@@ -14,38 +14,25 @@
 <hr/>
 <h1>CSI Output: Metadata</h1>
 <hr class="half"/>
-<h3>Call Coverage Details</h3>
-<p>Call Coverage metadata is stored as text in the debug
-section <samp>.debug_CC</samp> of the object file or executable.  Note
-that in the case of multiple object files linked into a single
-executable, the executable contains the complete metadata consolidated
-from all object files.  To extract this data, use a command similar
+<h3>Program Coverage Details</h3>
+<p>Program Coverage metadata is stored as text in the debug sections
+<samp>.debug_FC</samp>, <samp>.debug_CC</samp>, and <samp>.debug_BBC</samp> (for
+function coverage, call coverage, and statement coverage, respectively) of the
+object file or executable.  Note that in the case of multiple object files
+linked into a single executable, the executable contains the complete metadata
+consolidated from all object files.  To extract this data, use a command similar
 to<br/>
-<kbd class="indent">Tools/extract-section --require .debug_CC <var>myexe</var></kbd></p>
+<kbd class="indent">Tools/extract-section --require .debug_CC <var>myexe</var></kbd><br/>
+This particular command will extract the metadata for call-site coverage. The
+extracted information will contain entries for each instrumented function in any
+object file linked into the executable.</p>
 
-<p>The extracted information will contain entries for each instrumented function
-in any object file linked into the executable.  Each entry gives information for
-each call site in the function.  A complete example (from the unit test
-<span class="unittest">funcs</span>) is:</p>
-<pre class="indent">
-#a|__CC_arr_a
-0|20|printf
-1|14|printf
-2|17|abc
-3|18|abc
-4|19|abc
-#b|__CC_arr_b
-0|26|a
-#main|__CC_arr_main
-0|35|a
-1|35|printf
-2|36|b
-3|36|printf
-</pre>
-
-<p>The format grammar follows.  <span class="nonterm">Non-terminals</span> are
-distinguished from <span class="term">terminals</span> by capitalization, color,
-and italics.</p>
+<p>For each form of program coverage, we present example metadata (taken from
+the unit test <span class="unittest">funcs</span>), and the format grammar for
+the metadata.  In format grammars, <span class="nonterm">Non-terminals</span>
+are distinguished from <span class="term">terminals</span> by capitalization,
+color, and italics.  All metadata grammars contain the following shared
+rules:</p>
 
 <table class="grammar">
   <tbody>
@@ -64,14 +51,82 @@ and italics.</p>
     <tr>
       <td class="nonterm">Function</td>
       <td class="expansion">⩴</td>
-      <td><span class="term"># fn-name | global-array-name ↵</span> <span class="nonterm">Call_List</span></td>
+      <td><span class="term"># fn-name | global-array-name ↵</span> <span class="nonterm">Entry_List</span></td>
     </tr>
   </tbody>
+</table>
+
+<p><p>Each <span class="nonterm">Function</span> entry lists the function’s name
+and the name of the global coverage array.  Note that the non-terminal
+<span class="nonterm">Entry_List</span> is defined differently for each type of
+metadata.  The following sections describe each in detail.</p>
+
+<h4>Function Coverage</h4>
+<p>Function coverage metadata is stored in section <kbd>.debug_FC</kbd> of the
+instrumented object file or executable.  Each entry gives information for a
+function in the executable.  A complete example (from the unit test
+<span class="unittest">funcs</span>) is:</p>
+
+<pre class="indent">
+#abc|__FC_arr_abc
+#a|__FC_arr_a
+#b|__FC_arr_b
+#main|__FC_arr_main
+</pre>
+
+<p>The format grammar follows.</p>
+
+<table class="grammar">
   <tbody>
     <tr>
-      <td class="nonterm">Call_List</td>
+      <td class="nonterm">Entry_List</td>
       <td class="expansion">⩴</td>
-      <td><span class="nonterm">Call</span> <span class="term">↵</span> <span class="nonterm">Call_List</span></td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>That is, function coverage metadata lists only functions and their global
+coverage array names.  Of course, each of these &ldquo;arrays&rdquo; has only
+one entry (whether or not that function previously executed), so the variables
+are actually simply Booleans (see the <a href="variables.html">variables</a>
+page).  Function coverage data has no stack-local variant, as functions in the
+active program stack are clearly already executing.  Recall that each <span
+class="nonterm">Function</span> entry lists the function’s name and the name of
+the global coverage array.  In the example above, then, function
+<code>main</code>’s global function coverage variable will be named
+<code>__FC_arr_main</code> in the executing program.</p>
+
+<h4>Call-site Coverage</h4>
+<p>Call-site coverage metadata is stored in section <kbd>.debug_CC</kbd> of the
+instrumented object file or executable.  Each entry gives information for each
+call site in the function.  A complete example (from the unit test
+<span class="unittest">funcs</span>) is:</p>
+
+<pre class="indent">
+#a|__CC_arr_a
+0|20|printf
+1|14|printf
+2|17|abc
+3|18|abc
+4|19|abc
+#b|__CC_arr_b
+0|26|a
+#main|__CC_arr_main
+0|35|a
+1|35|printf
+2|36|b
+3|36|printf
+</pre>
+
+<p>The format grammar follows.</p>
+
+<table class="grammar">
+  <tbody>
+    <tr>
+      <td class="nonterm">Entry_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Call</span> <span class="term">↵</span> <span class="nonterm">Entry_List</span></td>
     </tr>
     <tr>
       <td/>
@@ -100,24 +155,100 @@ and italics.</p>
   </tbody>
 </table>
 
-<p>Each <span class="nonterm">Function</span> entry lists the function’s name
-and the name of the global coverage array.  In the example above, then, function
-<code>main</code>’s global array will be named <code>__CC_arr_main</code> in the
-executing program.</p>
-
-<p>The header is followed by <var>N</var> <span class="nonterm">Call</span>
-lines each describing one of the <var>N</var> call sites in the function.  For
-each call, the metadata lists the index of the call’s boolean flag (from 0
-to <var>N</var>-1) in both the local and global coverage arrays, the line number
-of the call, and the name of the <span class="nonterm">Called_Function</span>.
-If the called function cannot be statically determined, the function name is
-replaced with a
-<span class="term">?</span>.  In the example above, then, there is a call to
-function <code>abc</code> on line 17 within function <code>a</code>.  In a
-running version of this program, the boolean value at <code>__CC_arr_a[2]</code>
-(and the corresponding local variable <code>__CC_arr[2]</code>; see the
-<a href="variables.html">variables</a> page), denotes whether or not the program
+<p>Each function header lists the function’s name and the name of its global
+coverage array (e.g., <code>__CC_arr_main</code> holds data for
+<code>main</code>’s global call coverage).  The header is followed by
+<var>N</var> <span class="nonterm">Call</span> lines each describing one of the
+<var>N</var> call sites in the function.  For each call, the metadata lists the
+index of the call’s boolean flag (from 0 to <var>N</var>-1) in both the local
+and global coverage arrays, the line number of the call, and the name of the
+<span class="nonterm">Called_Function</span>. If the called function cannot be
+statically determined, the function name is replaced with a <span
+class="term">?</span>.  In the example above, then, there is a call to function
+<code>abc</code> on line 17 within function <code>a</code>.  In a running
+version of this program, the boolean value at <code>__CC_arr_a[2]</code> (and
+the corresponding local variable <code>__CC_arr[2]</code>; see the <a
+href="variables.html">variables</a> page), denotes whether or not the program
 has previously executed and returned from this call.</p>
+
+<h4>Statement Coverage</h4>
+<p>Statement coverage metadata is stored in section <kbd>.debug_BBC</kbd> of the
+instrumented object file or executable.  Each entry gives information for a
+single basic block in the function.  A complete example (from the unit test
+<span class="unittest">funcs</span>) is:</p>
+
+<pre class="indent">
+#abc|__BBC_arr_abc
+0|3|4
+1|5
+2|8
+3|9
+#a|__BBC_arr_a
+0|11|12|13
+1|14
+2|16
+3|17|18|19|20|21
+#b|__BBC_arr_b
+0|24|25
+1|26
+2|27
+3|28
+#main|__BBC_arr_main
+0|31|32|33|34|35|36|37
+</pre>
+
+<p>The format grammar follows.</p>
+
+<table class="grammar">
+  <tbody>
+    <tr>
+      <td class="nonterm">Entry_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Block</span> <span class="term">↵</span> <span class="nonterm">Entry_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Block</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">array-index |</span> <span class="nonterm">Line_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td><span class="term">array-index |</span> <span class="term">NULL</span></td>
+    </tr>
+  </tbody>
+  <tr>
+      <td class="nonterm">Line_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">line-num |</span> <span class="nonterm">Line_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">line-num</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Analogous to previous examples, function <code>main</code>’s global array
+will be named <code>__BBC_arr_main</code> in the executing program. The header
+is followed by <var>N</var> <span class="nonterm">Block</span> lines each
+describing one of the <var>N</var> basic blocks in the function.  For each
+block, the metadata lists the index of the block's boolean flag (from 0 to
+<var>N</var>-1) in both the local and global coverage arrays, and an ordered
+list of the line numbers for statements within that basic block
+(<span class="nonterm">Line_List</span>).  If the block contains no statements
+with line number information (e.g., for program flow not associated directly
+with source locations, or due to either incomplete debug information from
+compilation), the <span class="nonterm">Line_List</span> is replaced with
+<span class="term">NULL</span>.</p>
 
 <hr/>
 <table class="toptable"><tr>

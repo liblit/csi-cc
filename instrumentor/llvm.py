@@ -23,9 +23,17 @@ from distutils.version import StrictVersion
 from sys import stderr
 
 
+def check_llvm_bindir(context):
+    context.Message('Checking for LLVM binaries...')
+    success, output = context.TryAction('$LLVM_CONFIG --bindir >$TARGET')
+    output = output.rstrip()
+    context.Result(str(output))
+    context.env['LLVM_bindir'] = output
+
+
 def check_llvm_version(context):
     context.Message('Checking for LLVM version...')
-    success, output = context.TryAction('llvm-config --version >$TARGET')
+    success, output = context.TryAction('$LLVM_CONFIG --version >$TARGET')
     # some releases of LLVM 3.2 shipped as version 3.2svn
     output = output.replace('svn', '')
     if(not output):
@@ -43,11 +51,13 @@ def generate(env):
     conf = Configure(
         env,
         custom_tests={
+            'CheckLLVMBinDir': check_llvm_bindir,
             'CheckLLVMVersion': check_llvm_version,
             },
         help=False,
     )
     conf.CheckLLVMVersion()
+    conf.CheckLLVMBinDir()
     conf.Finish()
 
 

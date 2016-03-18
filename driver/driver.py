@@ -6,7 +6,7 @@
 # instrumenting compilation.  It must be subclassed.
 #====----------------------------------------------------------------------====#
 #
-# Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+# Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,13 +29,14 @@ from atexit import register
 from errno import ENOENT
 from inspect import getargspec
 from itertools import chain, imap, starmap
-from os import remove
+from os import environ, remove, mkdir
 from os.path import basename, splitext
 from pipes import quote
 from shlex import split
 from subprocess import CalledProcessError, check_call
 from sys import argv, stderr
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkdtemp
+from shutil import rmtree
 
 
 ########################################################################
@@ -215,6 +216,7 @@ class Driver(object):
         '__verbose',
         'finalGoal',
         'temporaryFile',
+        'temporaryDir',
         )
 
     def __init__(self, extraExact=dict(), extraRegexp=tuple()):
@@ -230,6 +232,7 @@ class Driver(object):
         self.__verbose = False
         self.finalGoal = self.__buildLinked
         self.temporaryFile = self.__namedTemporaryFile
+        self.temporaryDir = self.__namedTemporaryDir
 
     ####################################################################
     #
@@ -259,12 +262,14 @@ class Driver(object):
     def __handleFlagSaveTempsCwd(self, flag):
         """handle "-save-temps" and "-save-temps=cwd" flags"""
         self.temporaryFile = self.derivedFile
+        self.temporaryDir = self.derivedDir
         self.__derivedFilesNearOutputFile = False
         return self.__handleFlagOptionNoValue(flag)
 
     def __handleFlagSaveTempsObj(self, flag):
         """handle "-save-temps=obj" flag"""
         self.temporaryFile = self.derivedFile
+        self.temporaryDir = self.derivedDir
         self.__derivedFilesNearOutputFile = True
         return self.__handleFlagOptionNoValue(flag)
 
@@ -500,6 +505,15 @@ class Driver(object):
         basis = self.__outputFile if basedOnOutput else basename(inputFile.filename)
         return splitext(basis)[0] + extension
 
+    def derivedDir(self, inputFile, extension):
+        """create a (non-temporary) directory based on some other file name, but with a new extension"""
+        basedOnOutput = self.__derivedFilesNearOutputFile and self.__outputFile
+        basis = self.__outputFile if basedOnOutput else basename(inputFile.filename)
+        dirName = splitext(basis)[0] + extension
+        rmtree(dirName, ignore_errors=True)
+        mkdir(dirName)
+        return dirName
+
     @staticmethod
     def __namedTemporaryFile(_inputFile, extension):
         """create a temporary file with a given extension"""
@@ -510,10 +524,27 @@ class Driver(object):
         return handle.name
 
     @staticmethod
+    def __namedTemporaryDir(_inputFile, extension):
+        """create a temporary directory"""
+        __pychecker__ = 'unusednames=_inputFile'
+        tmpDir = mkdtemp(prefix='lid-', suffix=extension)
+        register(Driver.__tryRemoveDir, tmpDir)
+        return tmpDir
+
+    @staticmethod
     def __tryRemove(chaff):
         """Remove a file that may already be gone."""
         try:
             remove(chaff)
+        except OSError, error:
+            if error.errno != ENOENT:
+                raise error
+
+    @staticmethod
+    def __tryRemoveDir(chaff):
+        """Remove a directory that may already be gone."""
+        try:
+            rmtree(chaff)
         except OSError, error:
             if error.errno != ENOENT:
                 raise error
@@ -541,9 +572,10 @@ class Driver(object):
         """add instrumentation to a single source file's bitcode"""
         # pylint: disable=W0613
         __pychecker__ = 'unusednames=inputFile'
+        wrapper = split(environ.get('OPT_WRAPPER', ''), comments=False)
         prelude = ('opt', '-o', instrumented, uninstrumented)
         phases = self.getExtraOptArgs()
-        command = chain(prelude, phases)
+        command = chain(wrapper, prelude, phases)
         self.run(command)
 
     def getExtraOptArgs(self):

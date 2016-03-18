@@ -28,8 +28,9 @@ GCC versions before 4.2.</p>
 
 <p>As noted, LLVM version 3.1 or newer is required.  If LLVM is not installed
 in a standard location, you will probably have to tell scons where to find the
-bin directory of your installation.  You can do this by a command like<br/>
-<kbd class="indent">scons LLVMBIN=/path/to/LLVMBIN-DIR</kbd></p>
+LLVM configuration helper for your installation.  You can do this by a command
+like<br/>
+<kbd class="indent">scons LLVM_CONFIG=/path/to/llvm-config</kbd></p>
 
 <p>If you get an error like<br/>
 <samp class="indent">/usr/bin/ld: cannot find -lLLVM-3.X</samp><br/>

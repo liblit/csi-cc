@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>Running CSI: Tracing Schemes</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running_comments.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>Running CSI</h1>
+<hr class="half"/>
+<h3>Tracing Schemes</h3>
+<p>To compile with <kbd>csi-cc</kbd>, you must tell the compiler which tracing
+variants to create for each function.  This page describes the methods for
+providing this data to <kbd>csi-cc</kbd>, and the format of the data.</p>
+
+<p>If not otherwise specified, <kbd>csi-cc</kbd> will prompt the user for
+tracing configuration (read from <kbd>stdin</kbd>) before compilation.
+To specify a file containing appropriate tracing configuration, use the
+<kbd>--trace</kbd> flag.  For example, to instrument every function with
+path tracing and call-site coverage, you can the pre-built file provided with
+this release, as follows:<br/>
+<kbd class="indent">csi-cc --trace=$CSI_DIR/schemas/cc_pt.schema &lt;input file&gt;</kbd><br/>
+where <kbd>$CSI_DIR</kbd> refers to the root directory of this release.</p>
+
+<p>A description of tracing schemes and customization can be found in the
+journal paper associated with this code release
+[<a href="references.html#Ohmann-Liblit-Journal">1</a>].  In brief: each
+function in the original program has one or more possible sets of tracing
+mechanisms that it can have active during a run.  Each such set is called a
+tracing &ldquo;scheme.&rdquo;  For example, the aforementioned file
+<kbd>cc_pt.schema</kbd> encodes that all functions in the entire program have a
+single scheme: call-site coverage plus path tracing.  Another provided example
+schema, <kbd>realistic.schema</kbd>, creates three different variants for each
+original function:
+<ol>
+<li>No instrumentation: an exact copy of the original function</li>
+<li>Call-site coverage</li>
+<li>Call-site coverage plus path tracing</li>
+</ol></p>
+
+<p>A tracing schema is composed of an ordered list of matching rules.  Each
+function in the program is instrumented based on the first matching rule.  For
+example, the following schema:
+<pre class="indent">
+foo;{};{CC}
+*;{};{FC};{CC,PT}
+</pre>
+indicates that any function named <kbd>foo</kbd> will have two variants:
+<ol>
+<li>No instrumentation</li>
+<li>Call-site coverage</li>
+</ol>
+and that any other function will have three variants:
+<ol>
+<li>No instrumentation</li>
+<li>Function coverage</li>
+<li>Call-site coverage plus path tracing</li>
+</ol></p>
+
+<p>The format grammar follows.  <span class="nonterm">Non-terminals</span> are
+distinguished from <span class="term">terminals</span> by capitalization, color,
+and italics.</p>
+
+<table class="grammar">
+  <tbody>
+    <tr>
+      <td class="nonterm">Rule_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Rule</span> <span class="term">↵</span> <span class="nonterm">Rule_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="term">ε</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Rule</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">fn-name ;</span> <span class="nonterm">Scheme_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td><span class="term">* ;</span> <span class="nonterm">Scheme_List</span></td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Scheme_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Scheme</span> <span class="term">;</span> <span class="nonterm">Scheme_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="nonterm">Scheme</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Scheme</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">{</span> <span class="nonterm">Mechanism_List</span> <span class="term">}</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td><span class="term">{ }</span></td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Mechanism_List</td>
+      <td class="expansion">⩴</td>
+      <td><span class="nonterm">Mechanism</span> <span class="term">,</span> <span class="nonterm">Mechanism_List</span></td>
+    </tr>
+    <tr>
+      <td/>
+      <td class="alternative">|</td>
+      <td class="nonterm">Mechanism</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td class="nonterm">Mechanism</td>
+      <td class="expansion">⩴</td>
+      <td><span class="term">BBC</span> <span class="alternative">|</span> <span class="term">CC</span> <span class="alternative">|</span> <span class="term">FC</span> <span class="alternative">|</span> <span class="term">PT</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running_comments.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

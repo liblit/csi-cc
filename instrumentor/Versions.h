@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,17 +22,16 @@
 #ifndef CSI_VERSIONS_H
 #define CSI_VERSIONS_H
 
-#include <llvm/Config/llvm-config.h>
-#if !defined(LLVM_VERSION_MAJOR) || LLVM_VERSION_MAJOR != 3 || \
-    !defined(LLVM_VERSION_MINOR) || (LLVM_VERSION_MINOR != 1 && \
-                                     LLVM_VERSION_MINOR != 2 && \
-                                     LLVM_VERSION_MINOR != 3)
-  #error "LLVM version not supported.  Supported versions are <3.1, 3.2, 3.3>"
+#include <llvm/Config/config.h>
+
+#ifndef LLVM_VERSION_PATCH
+#  define LLVM_VERSION_PATCH 0
 #endif
 
-#define LLVM_3_1 (LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 1)
-#define LLVM_3_2 (LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 2)
-#define LLVM_3_3 (LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 3)
+
+#define LLVM_VERSION (LLVM_VERSION_MAJOR * 10000 \
+                   + LLVM_VERSION_MINOR * 100 \
+                   + LLVM_VERSION_PATCH)
 
 #define GCC_VERSION (__GNUC__ * 10000 \
                    + __GNUC_MINOR__ * 100 \

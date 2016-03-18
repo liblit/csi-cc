@@ -35,17 +35,24 @@ to<br/>
 <p>For details about the format of the Path Tracing metadata, please see the
 <a href="metadata_pt.html">Path Tracing</a> page.</p>
 
-<h3>Call Coverage</h3>
-<p>Call Coverage metadata is stored as text in the debug
-section <samp>.debug_CC</samp> of the object file or executable.  Note
-that in the case of multiple object files linked into a single
-executable, the executable contains the complete metadata consolidated
-from all object files.  To extract this data, use a command similar
+<h3>Program Coverage</h3>
+<p><kbd>csi-cc</kbd> currently supports three variants of program coverage
+instrumentation: function coverage, call-site coverage, and statement coverage.
+The metadata for each granularity of program coverage is stored as text in the
+respective debug section:
+<ul>
+<li><samp>.debug_FC</samp> (for function coverage)</li>
+<li><samp>.debug_CC</samp> (for call coverage)</li>
+<li><samp>.debug_BBC</samp> (for statement coverage)</li>
+</ul>
+Note that in the case of multiple object files linked into a single executable,
+the executable contains the complete metadata consolidated from all object
+files.  As an example, to extract call coverage data, use a command similar
 to<br/>
 <kbd class="indent">Tools/extract-section --require .debug_CC <var>myexe</var></kbd></p>
 
-<p>For details about the format of the Call Coverage metadata, please see the
-<a href="metadata_cc.html">Call Coverage</a> page.</p>
+<p>For details about the format of the Program Coverage metadata, please see the
+<a href="metadata_cc.html">Program Coverage</a> page.</p>
 
 <hr/>
 <table class="toptable"><tr>

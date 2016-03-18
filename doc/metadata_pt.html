@@ -27,7 +27,7 @@ to<br/>
 in any object file linked into the executable.  Each entry gives a
 description of the control-flow graph of the function, augmented by line
 number information and Ball/Larus instrumentation information (see
-[<a href="references.html#Ball-Larus">2</a>]).  A complete example
+[<a href="references.html#Ball-Larus">3</a>]).  A complete example
 (from the unit test <span class="unittest">loop</span>) is:</p>
 <pre class="indent">
 #
@@ -215,10 +215,11 @@ entry also contains the edge <span class="term">increment</span> (for
 instrumentation and partial path reconstruction) and the edge
 <span class="term">weight</span> (for complete acyclic path reconstruction).  If
 the edge is a backedge, these numbers represent the reinitialization of the path
-sum.  For details, see the paper
-[<a href="references.html#Ohmann-Liblit">1</a>], and the original
+sum.  For details, see the papers
+[<a href="references.html#Ohmann-Liblit-Journal">1</a>,
+ <a href="references.html#Ohmann-Liblit">2</a>], and the original
 discussion of this instrumentation scheme in
-[<a href="references.html#Ball-Larus">2</a>].</p>
+[<a href="references.html#Ball-Larus">3</a>].</p>
 
 <p>In the example above, then, the basic block in function <code>main</code>
 labeled 5 contains statements on lines 11, 12, and 13.  It is not the end of

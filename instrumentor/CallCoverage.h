@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,65 +22,40 @@
 #ifndef CSI_CALL_COVERAGE_H
 #define CSI_CALL_COVERAGE_H
 
-#include "PathTracing.h"
-
-#include <llvm/Pass.h>
+#include "ExtrinsicCalls.h"
+#include "LocalCoveragePass.h"
 
 #include "llvm_proxy/CFG.h"
 #include "llvm_proxy/DebugInfo.h"
-#include "llvm_proxy/DIBuilder.h"
 #include "llvm_proxy/Instructions.h"
-
-#include <map>
-#include <set>
-#include <fstream>
 
 namespace csi_inst {
 
 // ---------------------------------------------------------------------------
-// CallCoverage is a function pass which does call coverage instrumentation
+// CallCoverage is a module pass which does call coverage instrumentation
 // ---------------------------------------------------------------------------
-class CallCoverage : public llvm::FunctionPass {
+class CallCoverage : public LocalCoveragePass {
 private:
-  // Current context for multi threading support.
-  llvm::LLVMContext* Context;
-  // The Debug Info Builder for this module
-  llvm::DIBuilder* Builder;
+  static Options options;
+
+  // Perform module-level tasks, open streams, and instrument each function
+  bool runOnModule(llvm::Module &M);
   
-  // Insert necessary global variables for functions to use
-  bool doInitialization(llvm::Module &M);
-  // Finish up by closing the info file stream
-  bool doFinalization(llvm::Module& M);
-  // Instrument each function with coverage stuff on each call
-  bool runOnFunction(llvm::Function &F);
-  // Write out the function data for the info file
-  void writeFunctionValue(llvm::Function& F);
   // Write out the information for one call within a function
-  void writeOneCall(llvm::CallInst* theCall, unsigned int index);
+  void writeOneCall(llvm::CallInst* theCall, unsigned int index,
+                    bool isInstrumented=true);
   
-  std::ofstream _infoStream; // The output stream to the info file (managed
-                             // by runOnFunction and written to as we go)
+  // Instrument each function for coverage on each call
+  void instrumentFunction(llvm::Function &);
   
 public:
-  
-  // the mapping from functions to the list of instrumented
-  // call-sites future passes (i.e. CallCoverage) will have for that function
-  std::map<llvm::Function*, std::set<llvm::CallInst*> > functionCalls;
-  // the mapping from functions to their global array
-  std::map<llvm::Function*, llvm::GlobalVariable*> funcToGlobalArray;
-  
+  static const CoveragePassNames names;
   static char ID; // Pass identification, replacement for typeid
-  CallCoverage() : FunctionPass(ID) {}
+  CallCoverage() : LocalCoveragePass(ID, names) {}
 
   virtual const char *getPassName() const {
     return "Intra/Interprocedural Call Coverage Instrumentation";
   }
-  
-  // We need the mapping information from the path tracing instrumentation
-  //void getAnalysisUsage(AnalysisUsage &AU) const {
-  //  //AU.setPreservesCFG();
-  //  AU.addRequired<PathProfiler>();
-  //}
 };
 } // end csi_inst namespace
 

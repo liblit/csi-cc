@@ -9,7 +9,7 @@
 //  http://portal.acm.org/citation.cfm?id=243857
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@
 
 #include "llvm_proxy/CFG.h"
 #include "llvm_proxy/DebugInfo.h"
-#include "llvm_proxy/DIBuilder.h"
 #include "llvm_proxy/Instructions.h"
 
 #include <fstream>
@@ -248,35 +247,27 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// PathTracing is a function pass which instruments basd on Ball/Larus
+// PathTracing is a module pass which instruments based on Ball/Larus
 // path profiling
 // ---------------------------------------------------------------------------
-class PathTracing : public llvm::FunctionPass {
+class PathTracing : public llvm::ModulePass {
 private:
   // Current context for multi threading support.
   llvm::LLVMContext* Context;
-  // The Debug Info Builder for this module
-  llvm::DIBuilder* Builder;
-  // Mapping functions to their global instrumented flag
-  std::map<llvm::Function*, llvm::Value*> funcInstMap;
   
   // Gets/sets the current path tracker and it's debug info
   llvm::Value* getPathTracker();
   void setPathTracker(llvm::Value* c);
-  
   llvm::Value* _pathTracker; // The storage for the current path tracker
-  std::ofstream _trackerStream; // The output stream to the tracker file
-                                // (managed by runOnFunction and written to as
-                                // we go)
   
-  // Get some context to prep for instrumenting appropriate functions
-  bool doInitialization(llvm::Module &M);
+  std::ofstream trackerStream; // The output stream to the tracker file
+                               // (managed by runOnFunction and written to as
+                               // we go)
 
-  // Analyzes the function for path tracing, duplicates, and instruments
+  // Analyzes and instruments the function for path tracing
   bool runOnFunction(llvm::Function &F);
-  
-  // Finish up by closing any open streams
-  bool doFinalization(llvm::Module& M);
+  // Perform module-level tasks, open streams, and instrument each function
+  bool runOnModule(llvm::Module &M);
 
   // Creates an increment constant representing incr.
   llvm::ConstantInt* createIncrementConstant(long incr, int bitsize);
@@ -323,16 +314,13 @@ private:
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  PathTracing() : FunctionPass(ID) {}
+  PathTracing() : ModulePass(ID) {}
 
   virtual const char *getPassName() const {
     return "Intraprocedural Path Tracing";
   }
   
-  // the mapping from old instructions <-> new ones (for the in-function
-  // duplication that occurs for inst vs. uninst)
-  std::map<llvm::Instruction*, llvm::Instruction*> oldToNewCallMap;
-  
+  void getAnalysisUsage(llvm::AnalysisUsage &) const;
 };
 } // end csi_inst namespace
 

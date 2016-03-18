@@ -19,41 +19,39 @@
 running program.  It is not written out to an external trace file.  To extract
 this information, you will need a debugger, such as
 <a href="http://www.gnu.org/software/gdb/">gdb</a>.  For further details, please
-see [<a href="references.html#Ohmann-Liblit">1</a>].</p>
+see
+[<a href="references.html#Ohmann-Liblit-Journal">1</a>,
+ <a href="references.html#Ohmann-Liblit">2</a>].</p>
 
 <h3>Path Tracing</h3>
 <p>Path Tracing data is always stack-bound.  The same variable names are used
 for all functions.</p>
 
-<p>The local variable <code>__PT_pathArr</code> exists for each instrumented
-function in the program stack.  If tracing is enabled at run time for this
-function, then <code>__PT_pathArr</code> is an array holding the
-last <var>N</var> acyclic paths taken in the particular invocation of the
-function.  The size of the array is defined when compiling
-with <kbd>csi-cc</kbd> (see <a href="running_comments.html">comments on
-running <kbd>csi-cc</kbd></a>), and defaults to 10.  The last value of
-<code>__PT_pathArr</code> is particularly important: if the last value is -1,
-then fewer than <var>N</var> acyclic paths were completed; otherwise, the
-circular array has wrapped around at least once.  If tracing is disabled, array
-entries are not meaningful.</p>
+<p>The local variable <code>__PT_pathArr</code> exists for each function variant
+instrumented for path tracing.  While the function is executing (i.e., on the
+active program stack) <code>__PT_pathArr</code> is an array holding the last
+<var>N</var> acyclic paths taken in the particular invocation of the function.
+The size of the array is defined when compiling with <kbd>csi-cc</kbd> (see <a
+href="running_comments.html">comments on running <kbd>csi-cc</kbd></a>), and
+defaults to 10.  The last value of <code>__PT_pathArr</code> is particularly
+important: if the last value is -1, then fewer than <var>N</var> acyclic paths
+were completed; otherwise, the circular array has wrapped around at least
+once.</p>
 
-<p>The local variable <code>__PT_arrIndex</code> exists for each instrumented
-function in the program stack.  If tracing is enabled at run time for this
-function, then <code>__PT_arrIndex</code> contains the index
-in <code>__PT_pathArr</code> for the <strong>next</strong> acyclic path entry.
-For example, if the value of <code>__PT_arrIndex</code> is 4, then the last
-completed acyclic path is stored in
-<code>__PT_pathArr[3]</code>.  If tracing is disabled,
-then <code>__PT_arrIndex</code> has the value -1.</p>
+<p>The local variable <code>__PT_arrIndex</code> exists for each function
+variant instrumented for path tracing.  While the function is executing (i.e.,
+on the active program stack) <code>__PT_arrIndex</code> contains the index in
+<code>__PT_pathArr</code> for the <strong>next</strong> acyclic path entry. For
+example, if the value of <code>__PT_arrIndex</code> is 4, then the last
+completed acyclic path is stored in <code>__PT_pathArr[3]</code>.</p>
 
-<p>The local variable <code>__PT_curPath</code> exists for each instrumented
-function in the program stack.  If tracing is enabled at run time for this
-function, then <code>__PT_curPath</code> holds the current path sum.  Changes in
-the value of this variable are expounded in the <a href="metadata_pt.html">Path
-Tracing metadata</a> page.  This value is reset to 0 whenever an acyclic path is
-completed and written into
-<code>__PT_pathArr[__PT_arrIndex]</code>, and intialized along backedges.  If
-tracing is disabled, this value is not meaningful.</p>
+<p>The local variable <code>__PT_curPath</code> exists for each function variant
+instrumented for path tracing.  While the function is executing (i.e., on the
+active program stack) <code>__PT_curPath</code> holds the current path sum.
+Changes in the value of this variable are expounded in the <a
+href="metadata_pt.html">Path Tracing metadata</a> page.  This value is reset to
+0 whenever an acyclic path is completed and written into
+<code>__PT_pathArr[__PT_arrIndex]</code>, and intialized along backedges.</p>
 
 <div class="indent">
 <h4>Examples</h4>
@@ -87,59 +85,131 @@ this is the same example used on the
 </ol>
 </div>
 
-<div class="indent">
-<h4>Customization</h4>
-<p>Tracing of individual functions can be enabled and disabled via very simple
-binary modification of instrumented executables.  Each individual instrumented
-function has a unique global flag appearing in the <samp>__PT_func_inst</samp>
-section of the data segment.  The name for each flag is the concatenation of
-<samp>__PT_inst_</samp>, a C-legal string representing the compilation unit, and
-the function name.  For example, a function <code>foo</code> in file
-<code>bar.c</code> might have a name something like
-<samp>__PT_inst_bar_c_foo</samp>.</p>
-</div>
+<h3>Program Coverage</h3>
 
-<h3>Call Coverage</h3>
-<p>Call Coverage data for each function is stored in one local and one global
-array, both of the same size.  The arrays for local coverage information share
-the same name across different functions, and global coverage shares one array
-across all invocations of each function.</p>
+<p>Program Coverage data for each function (with the corresponding coverage
+instrumentation) is stored in one local and one global array, both of the same
+size.  The arrays for local coverage information share the same name across
+different functions, and global coverage shares one array across all invocations
+of each function.  Note that function coverage is a special case: there is no
+local coverage array for function coverage (as all functions on the active stack
+are clearly already executing), and global arrays for function coverage are
+always of size 1.</p>
 
-<p>The local variable <code>__CC_arr</code> exists for each instrumented
-function in the program stack.  The size of this array is determined by the
-number of call sites in the function.  Each entry will be either <em>true</em>
-(non-zero) or <em>false</em> (zero), indicating whether or not the call site was
-executed (so far) in the current invocation of the function.</p>
-
-<p>Each instrumented function, with name <code><var>f</var></code>, also has a
-global array with name <code>__CC_arr_<var>f</var></code>.  Again, the size of
+<p>Local variables exist for each instrumented function variant, and are
+accessible from the active program stack. The following local variables hold
+stack-local information for call-site coverage and statement coverage,
+respectively.</p>
+<ul>
+<li><code>__CC_arr</code> is the local variable for call-site coverage data, and
+exists for all function variants with call-site coverage enabled.  The size of
 this array is determined by the number of call sites in the function.  Each
-entry will be either
-<em>true</em> (non-zero) or <em>false</em> (zero), indicating whether or not
-<strong>any</strong> invocation of this call site was ever executed (so far)
-across the execution of the entire program.</p>
+entry will be either <em>true</em> (non-zero) or <em>false</em> (zero),
+indicating whether or not the call site was executed (so far) in the current
+invocation of the function.</li>
+<li><code>__BBC_arr</code> is the local variable for statement coverage data,
+and exists for all function variants with statement coverage enabled.  The size
+of this array is determined by the number of basic blocks in the function.  Each
+entry will be either <em>true</em> (non-zero) or <em>false</em> (zero),
+indicating whether or not the indicated basic block has completed execution at
+least once (so far) in the current invocation of the function.</li>
+</ul>
+
+<p>Each instrumented function, with name <code><var>f</var></code>, also has up
+to 3 global arrays for coverage data (one for each of function, call-site, and
+statement coverage data; depending on the instrumentation schemes available for
+that function).  The specific names of these global arrays are given in the
+metadata for each type of program coverage (see the
+
+<a href="metadata_cc.html">metadata page</a> for details).  Sample array data
+(for the same example) might be:</p>
+<ul>
+<li>A global variable <code>__FC_arr_<var>f</var></code> for function coverage.
+This is a single Boolean variable.  Its value will be either <em>true</em>
+(non-zero) or <em>false</em> (zero), indicating whether or not any portion of
+<code><var>f</var></code> was ever executed (so far) across the execution of the
+entire program.</li>
+<li>A global variable <code>__CC_arr_<var>f</var></code> for call-site coverage.
+The size of this array is determined by the number of call sites in the
+function.  Each entry will be either <em>true</em> (non-zero) or <em>false</em>
+(zero), indicating whether or not <strong>any</strong> invocation of this call
+site was ever executed (so far) across the execution of the entire program.</li>
+<li>A global variable <code>__BBC_arr_<var>f</var></code> for statement
+coverage. The size of this array is determined by the number of basic blocks in
+the function.   Each entry will be either <em>true</em> (non-zero) or
+<em>false</em> (zero), indicating whether or not the indicated basic block has
+completed execution (so far) during <strong>any</strong> invocation of the
+function across the execution of the entire program.</li>
+</ul>
 
 <div class="indent">
 <h4>Example</h4>
 <p>This example references the metadata from the example on the
-<a href="metadata_cc.html">Call Coverage metadata</a> page.  The example is
+<a href="metadata_cc.html">Program Coverage metadata</a> page.  The example is
 given from the perspective of currently executing function <code>a</code> at
 line 18, called by function <code>b</code> at line 26, called by function
 <code>main</code> at line 36.</p>
 <p class="indent">
+<code>__FC_arr_abc</code> = 1<br/>
+<code>__FC_arr_a</code> = 1<br/>
+<code>__FC_arr_b</code> = 1<br/>
+<code>__FC_arr_main</code> = 1<br/>
+<br/>
 <code>__CC_arr_a</code> = {1, 1, 1, 1, 1}<br/>
 <code>__CC_arr_b</code> = {0}<br/>
 <code>__CC_arr_main</code> = {1, 1, 0, 0}<br/>
-<code>__CC_arr</code> = {0, 0, 1, 0, 0}</p>
-<p>In this example, the current invocation of <code>a</code> has only completed
-the call to <code>abc</code> at line 17 (denoted by <code>__CC_arr[2]</code>).
-However, previous invocations of <code>a</code> have executed the other four
-call sites in <code>a</code> at lines 14, 18, 19, and 20 (as indicated by
+<br/>
+<code>__BBC_arr_abc</code> = {1, 0, 1, 1}<br/>
+<code>__BBC_arr_a</code> = {1, 1, 1, 1}<br/>
+<code>__BBC_arr_b</code> = {1, 0, 0, 0}<br/>
+<code>__BBC_arr_main</code> = {0}<br/>
+<br/>
+<code>__CC_arr</code> = {0, 0, 1, 0, 0}<br/>
+<code>__BBC_arr</code> = {1, 1, 0, 0}<br/></p>
+
+<p>First, consider the function coverage variables for each function.  For this
+example, we obtain very little information: since functions <code>a</code>,
+<code>b</code>, and <code>main</code> are in the active stack, their respective
+values are known to be <em>true</em> (as they are set at function entry).  We
+can, however, see that function <code>abc</code> previously executed.</p>
+
+<p>Next, consider the call-site coverage variables.  In this example, the
+current invocation of <code>a</code> has only completed the call to
+<code>abc</code> at line 17 (denoted by <code>__CC_arr[2]</code>). However,
+previous invocations of <code>a</code> have executed the other four call sites
+in <code>a</code> at lines 14, 18, 19, and 20 (as indicated by
 <code>__CC_arr_a</code>).  The next stack frame (not shown) would indicate that
 execution in function <code>b</code> is currently executing, but has not yet
 returned from, the call to <code>a</code> at line 26 (as indicated by
 <code>__CC_arr_b[0]</code>).</p>
+
+<p>Finally, consider the statement coverage variables.  The local variable again
+indicates the same information as <code>__CC_arr</code>: the basic block
+containing function entry plus lines 12 and 13 has executed (denoted by
+<code>__BBC_arr[0]</code>); further, the basic block containing line 14 has
+executed (denoted by <code>__BBC_arr[1]</code>).  Note that
+<code>__BBC_arr[3]</code> indicates that this invocation of <code>a</code> has
+not yet executed the block containing lines 17, 18, 19, 20, and 21.  This is
+true: that block has only <em>partially</em> executed.  One can glean similar
+information from the global statement coverage arrays.  Function
+<code>abc</code> executed previously, but on no previous execution was the
+return statement on line 5 executed (as indicated by
+<code>__BBC_arr_abc[1]</code>).  In addition to the fact that this is the first
+call to <code>a</code> via line 26 in function <code>b</code> (which is visible
+from <code>__CC_arr_b[0]</code>), <code>__BBC_arr_b[2]</code> indicates that no
+previous call to <code>b</code> executed the return statement on line 27.</p>
 </div>
+
+<!--
+
+<h3>Customization</h3>
+
+<p>Tracing of individual functions can be enabled and disabled via very simple
+binary modification of instrumented executables.  Each individual instrumented
+function has a unique global selector variable appearing in the
+<samp>__CSI_func_inst</samp> section of the data segment.</p>
+
+-->
 
 <hr/>
 <table class="toptable"><tr>
