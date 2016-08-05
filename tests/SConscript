@@ -12,8 +12,12 @@ env = env.Clone(
     CFLAGS=(
         '--trace=$CSI_SCHEMA',
         '-no-filter',
+        '-csi-opt=$CSI_OPTIMIZATION_LEVEL',
     ),
+    CSI_OPTIMIZATION_SUFFIX='-O$CSI_OPTIMIZATION_LEVEL',
     CSI_SCHEMA=File('../schemas/all.schema'),
+    OBJSUFFIX='${CSI_OPTIMIZATION_SUFFIX}$OBJSUFFIX',
+    PROGSUFFIX='${CSI_OPTIMIZATION_SUFFIX}$PROGSUFFIX',
     )
 
 if env['MEMCHECK']:
@@ -28,36 +32,37 @@ def ExtractStatic(environ, executable, suffix):
     environ.Command(check,  (extractor, executable), '$SOURCE --require .debug_' + suffix + ' ${SOURCES[1]} >$TARGET')
     return check
 
-def RunTest(self, basename, sources=None):
-    oenv = self.Clone()
+def RunTest(self, basename, sources=None, optLevels=(0,)):
+    for optLevel in optLevels:
+        oenv = self.Clone(CSI_OPTIMIZATION_LEVEL=optLevel)
 
-    if not sources: sources = (basename + '.c',)
-    sources = map(File, sources)
-    objects = oenv.Object(sources)
-    executable, = oenv.Program(basename, objects)
+        if not sources: sources = (basename + '.c',)
+        sources = map(File, sources)
+        objects = oenv.Object(sources)
+        executable, = oenv.Program(basename, objects)
 
-    oenv.Depends((objects, executable), (
-        oenv['CC'],
-        '#driver/driver.py',
-        '#Release/libCSI.so',
-        Value('MEMCHECK=%s' % oenv['MEMCHECK']),
-    ))
-    oenv.Depends(objects, oenv['CSI_SCHEMA'])
+        oenv.Depends((objects, executable), (
+            oenv['CC'],
+            '#driver/driver.py',
+            '#Release/libCSI.so',
+            Value('MEMCHECK=%s' % oenv['MEMCHECK']),
+        ))
+        oenv.Depends(objects, oenv['CSI_SCHEMA'])
 
-    # extract and check static metadata
-    extractor = File('#Tools/extract-section')
-    for scheme in 'PT', 'CC', 'BBC', 'FC':
-        actual = executable.target_from_source('', '.csi-static-' + scheme)
-        oenv.Command(actual,  (extractor, executable), '$SOURCE --require .debug_' + scheme + ' ${SOURCES[1]} >$TARGET')
-        passed = oenv.ExpectStaticCSI(actual)
-        Alias('test', passed)
+        # extract and check static metadata
+        extractor = File('#Tools/extract-section')
+        for scheme in 'PT', 'CC', 'BBC', 'FC':
+            actual = executable.target_from_source('', '.csi-static-' + scheme)
+            oenv.Command(actual,  (extractor, executable), '$SOURCE --require .debug_' + scheme + ' ${SOURCES[1]} >$TARGET')
+            passed = oenv.ExpectStaticCSI(actual)
+            Alias('test', passed)
 
-    # run execution test
-    inputFile = basename + '.in'
-    outputFile = executable.target_from_source('', '.out')
-    oenv.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >&$TARGET')
-    expectOut = oenv.ExpectExact(outputFile)
-    Alias('test', expectOut)
+        # run execution test
+        inputFile = basename + '.in'
+        outputFile = executable.target_from_source('', '.out')
+        oenv.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >&$TARGET')
+        expectOut = oenv.ExpectExact(outputFile)
+        Alias('test', expectOut)
 
 
 env.AddMethod(RunTest)

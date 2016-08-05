@@ -8,7 +8,7 @@
 <body>
 <div class="toptitle">CSI Guide</div>
 <table class="toptable"><tr>
-<td class="topprev"><a href="running_schemes.html">&larr; Prev</a></td>
+<td class="topprev"><a href="running_optimization.html">&larr; Prev</a></td>
 <td class="topnext"><a href="output.html">Next &rarr;</a></td>
 </tr></table>
 <hr/>
@@ -40,6 +40,12 @@ OPTIONS:
   --trace=&lt;file&gt;          Use &lt;file&gt; as the input file for the tracing schemes.
                           If this option is not given, the scheme is read from
                           stdin.
+  -csi-opt=&lt;arg&gt;          Use &lt;arg&gt; as the optimization level for CSI
+                          instrumentation passes.  Legal values are &lt;0,1,2,3&gt;.
+                          (Default: 2)
+  -opt-style=&lt;arg&gt;        Use &lt;arg&gt; as the style for CSI optimization level 2.
+                          Legal values are &lt;simple,local,local-prepass&gt;.
+                          (Default: local-prepass)
   -debug-pass=&lt;arg&gt;       Enable printing of extremely verbose debug messages
                           for the pass specified as &lt;arg&gt;.  This should
                           generally not be used unless debugging instrumentors.
@@ -50,6 +56,12 @@ OPTIONS:
   -hash-size &lt;arg&gt;        Use &lt;arg&gt; as the maximum-size function (in number of
                           acyclic paths) to instrument for path tracing
                           (Default: ULONG_MAX/2+1)
+  -complete-exe           Optimize coverage instrumentation further such that
+                          accurate coverage information is only guaranteed for
+                          complete function executions.  This can potentially
+                          improve instrumentation efficiency, but may lose
+                          information; thus, it should not be used in normal
+                          circumstances.
   -no-filter              Do not filter tracing schemes.  All schemes provided
                           will be used verbatim for functions to which they
                           match.
@@ -70,7 +82,7 @@ ENVIRONMENT VARIABLES:
 
 <hr/>
 <table class="toptable"><tr>
-<td class="topprev"><a href="running_schemes.html">&larr; Prev</a></td>
+<td class="topprev"><a href="running_optimization.html">&larr; Prev</a></td>
 <td class="topnext"><a href="output.html">Next &rarr;</a></td>
 </tr></table>
 <div class="contents_link"><a href="index.html">Contents</a></div>

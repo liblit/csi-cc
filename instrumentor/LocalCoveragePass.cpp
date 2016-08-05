@@ -20,6 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //===----------------------------------------------------------------------===//
+#include "CoverageOptimization.h"
 #include "CoveragePassNames.h"
 #include "LocalCoveragePass.h"
 #include "Utils.hpp"
@@ -41,15 +42,18 @@ csi_inst::LocalCoveragePass::LocalCoveragePass(char &id, const CoveragePassNames
 void csi_inst::LocalCoveragePass::getAnalysisUsage(AnalysisUsage &usage) const
 {
   CoveragePass::getAnalysisUsage(usage);
+
+  // odd bug necessitates this going last; probably related to
+  // <http://llvm.org/bugs/show_bug.cgi?id=9550>
+  requireAndPreserve<CoverageOptimizationData>(usage);
 }
 
 
-csi_inst::LocalCoveragePass::CoverageArrays csi_inst::LocalCoveragePass::prepareFunction(Function &function, unsigned arraySize, const SilentInternalOption &silentInternal)
+csi_inst::LocalCoveragePass::CoverageArrays csi_inst::LocalCoveragePass::prepareFunction(Function &function, unsigned arraySize, const SilentInternalOption &silentInternal, DIBuilder &debugBuilder)
 {
   ArrayType * const tArr = ArrayType::get(tBool, arraySize);
 
   // create global coverage array
-  DIBuilder debugBuilder(*function.getParent());
   const DIType arrType = createArrayType(debugBuilder, arraySize, boolType);
   GlobalVariable &theGlobal = getOrCreateGlobal(debugBuilder, function, *tArr, arrType, names.upperShort);
   
@@ -74,12 +78,14 @@ void csi_inst::LocalCoveragePass::insertArrayStoreInsts(const CoverageArrays &ar
     ConstantInt::get(intType, index),
   };
 
-  builder.CreateStore(trueValue, builder.CreateInBoundsGEP(&arrays.local,  gepIndices, "local"  + names.upperShort), true);
+  Value * const localGEP = builder.CreateInBoundsGEP(&arrays.local, gepIndices, "local"  + names.upperShort);
+  builder.CreateStore(trueValue, localGEP, true);
+  Value * const globalGEP = builder.CreateInBoundsGEP(&arrays.global, gepIndices, "global" + names.upperShort);
 #if LLVM_VERSION < 30200
-  StoreInst * const globalStore = builder.CreateStore(trueValue, builder.CreateInBoundsGEP(&arrays.global, gepIndices, "global" + names.upperShort), false);
+  StoreInst * const globalStore = builder.CreateStore(trueValue, globalGEP, false);
   globalStore->setAlignment(1);
 #else
-  StoreInst * const globalStore = builder.CreateAlignedStore(trueValue, builder.CreateInBoundsGEP(&arrays.global, gepIndices, "global" + names.upperShort), 1, false);
+  StoreInst * const globalStore = builder.CreateAlignedStore(trueValue, globalGEP, 1, false);
 #endif
   globalStore->setOrdering(Unordered);
   globalStore->setSynchScope(CrossThread);
@@ -89,8 +95,9 @@ void csi_inst::LocalCoveragePass::insertArrayStoreInsts(const CoverageArrays &ar
 ////////////////////////////////////////////////////////////////////////
 
 
-csi_inst::LocalCoveragePass::Options::Options(const CoveragePassNames &names)
+csi_inst::LocalCoveragePass::Options::Options(const CoveragePassNames &names, const char descriptionO1[])
   : CoveragePass::Options(names),
+    optimizationLevel(names, descriptionO1),
     silentInternal(names)
 {
 }

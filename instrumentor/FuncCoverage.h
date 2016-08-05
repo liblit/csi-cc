@@ -47,7 +47,7 @@ private:
   bool runOnModule(llvm::Module &M);
 
   // Instrument each function with coverage at entry
-  void instrumentFunction(llvm::Function &);
+  void instrumentFunction(llvm::Function &, llvm::DIBuilder &);
   
 public:
   static const CoveragePassNames names;

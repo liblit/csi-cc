@@ -23,6 +23,7 @@
 
 #include "BBCoverage.h"
 #include "CoveragePassNames.h"
+#include "CoverageOptimization.h"
 #include "Utils.hpp"
 
 #include <llvm/Support/Debug.h>
@@ -45,7 +46,8 @@ const CoveragePassNames BBCoverage::names = {
 };
 
 BBCoverage::Options BBCoverage::options(
-   names
+   names,
+   "same as O2"
 );
 
 // Register basic block coverage as a pass
@@ -60,6 +62,34 @@ void BBCoverage::getAnalysisUsage(AnalysisUsage &AU) const {
   LocalCoveragePass::getAnalysisUsage(AU);
 }
 
+
+set<BasicBlock*> BBCoverage::getOptimizedInstrumentation(Function& F){
+  CoverageOptimizationData& sgData = getAnalysis<CoverageOptimizationData>(F);
+  
+  set<BasicBlock*> result;
+  switch (options.optimizationLevel)
+    {
+    case OptimizationOption::O1:
+      // same as O2 (we are already at the level of one probe per BB)
+    case OptimizationOption::O2:
+      result = sgData.getOptimizedProbes(&F);
+      break;
+    case OptimizationOption::O3:
+#ifdef USE_GAMS
+      result = sgData.getOptimizedProbes(&F, NULL, NULL, true);
+      break;
+#else
+      report_fatal_error("csi build does not support optimization level 3. "
+                         "csi must be built with GAMS optimization enabled");
+#endif
+    default:
+      report_fatal_error("basic block optimization level reached invalid "
+                         "point in function '" + F.getName() + "'");
+    }
+
+  DEBUG(dbgs() << "instrumenting: " << setBB_asstring(result) << "\n");
+  return(result);
+}
 
 void BBCoverage::writeOneBB(BasicBlock* theBlock, unsigned int index,
                             bool isInstrumented){
@@ -82,12 +112,15 @@ void BBCoverage::writeOneBB(BasicBlock* theBlock, unsigned int index,
 }
 
 
-void BBCoverage::instrumentFunction(Function &function)
+void BBCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilder)
 {
   // get [optimized] basic blocks to cover in function
   set<BasicBlock*> fBBs;
-  for (Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
-    fBBs.insert(i);
+  if (options.optimizationLevel == OptimizationOption::O0)
+    for (Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
+      fBBs.insert(i);
+  else
+    fBBs = getOptimizedInstrumentation(function);
   unsigned int arraySize = fBBs.size();
   if (arraySize < 1)
     return;
@@ -95,7 +128,7 @@ void BBCoverage::instrumentFunction(Function &function)
   BasicBlock &entryBlock = function.getEntryBlock();
   BasicBlock::iterator entryInst = entryBlock.getFirstInsertionPt();
 
-  const CoverageArrays arrays = prepareFunction(function, arraySize, options.silentInternal);
+  const CoverageArrays arrays = prepareFunction(function, arraySize, options.silentInternal, debugBuilder);
   
   // instrument each site
   unsigned int curIdx = 0;
@@ -113,12 +146,6 @@ void BBCoverage::instrumentFunction(Function &function)
       // write out the instrumentation site's static location details
       writeOneBB(&block, curIdx++, true);
     }
-  
-  // write out uninstrumented sites
-  unsigned int uninstIdx = 1;
-  for (Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
-    if (!fBBs.count(i))
-      writeOneBB(i, uninstIdx++, false);
 }
 
 

@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<link rel="stylesheet" type="text/css" href="resources/common.css"/>
+<title>Running CSI: Coverage Optimization</title>
+</head>
+<body>
+<div class="toptitle">CSI Guide</div>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running_schemes.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running_comments.html">Next &rarr;</a></td>
+</tr></table>
+<hr/>
+<h1>Running CSI</h1>
+<hr class="half"/>
+<h3>Coverage Optimization</h3>
+<p><kbd>csi-cc</kbd> can optimize its statement and call-site coverage
+instrumentation.  It also supports various levels of optimization, trading off
+compilation time for a reduction in the number of probed locations.  This page
+describes the levels of coverage optimization currently available in
+<kbd>csi-cc</kbd>.</p>
+
+<p>To specify the level of coverage optimization, use the flag
+<kbd>-csi-opt=&lt;arg&gt;</kbd>.  <kbd>arg</kbd> can be any of 0, 1, 2, or 3.
+For example, to compile for call-site coverage instrumentation optimized at
+level 1, use the following command:<br/>
+<kbd class="indent">csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=1 &lt;input file&gt;</kbd><br/>
+Optimization level 2 has two variants, based on the <kbd>-opt-style</kbd> flag.
+Specifically, <kbd>-opt-style=simple</kbd> will use a cheaper dominator-based
+approximation, while <kbd>-opt-style=local-prepass</kbd> (the default) will
+compute a locally-optimal approximation of optimal coverage probe placement.
+
+The following table specifies the effect of each level of optimization.</p>
+<table class="indent">
+  <tbody>
+    <tr>
+      <th class="nowrap"></th>
+      <th>CC</th>
+      <th>BBC</th>
+    </tr>
+    <tr>
+      <th class="nowrap"><kbd>-csi-opt=0</kbd></th>
+      <td>All call sites are instrumented.</td>
+      <td>All basic blocks are instrumented.</td>
+    </tr>
+    <tr>
+      <th class="nowrap"><kbd>-csi-opt=1</kbd></th>
+      <td>One call site is instrumented per basic block.</td>
+      <td>Same as level 2.</td>
+    </tr>
+    <tr>
+      <th class="nowrap"><kbd>-csi-opt=2<br/>-opt-style=simple</kbd></th>
+      <td>A simple dominator-based approximation further reduces the number of
+          call sites that need to be probed.</td>
+      <td>A simple dominator-based approximation further reduces the number of
+          blocks that need to be probed to obtain full statement coverage.</td>
+    </tr>
+    <tr>
+      <th class="nowrap"><kbd>-csi-opt=2</kbd></th>
+      <td>A more expensive locally-optimal approximation to the minimal number
+          of probes necessary to obtain full call-site coverage.</td>
+      <td>A more expensive locally-optimal approximation to the minimal number
+          of probes necessary to obtain full statement coverage.</td>
+    </tr>
+    <tr>
+      <th class="nowrap"><kbd>-csi-opt=3</kbd></th>
+      <td>Fully-optimal call-site coverage instrumentation.  Requires that the
+          optimization framework <a href="https://www.gams.com/">GAMS</a> be
+          installed on your system.</td>
+      <td>Fully-optimal statement coverage instrumentation.  Requires that the
+          optimization framework <a href="https://www.gams.com/">GAMS</a> be
+          installed on your system.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Thus, the results in the ASE 2016 paper
+[<a href="references.html#Ohmann-Liblit-2016">1</a>] are gathered as
+follows:</p>
+<p class="indent">
+  Statement coverage [No optimization]: <kbd>csi-cc --trace=$CSI_DIR/schemas/bb.schema -csi-opt=0</kbd><br/>
+  Statement coverage [Dominator approximation]: <kbd>csi-cc --trace=$CSI_DIR/schemas/bb.schema -csi-opt=2 -opt-style=simple</kbd><br/>
+  Statement coverage [Locally optimal]: <kbd>csi-cc --trace=$CSI_DIR/schemas/bb.schema -csi-opt=2</kbd><br/>
+  <br/>
+  Call-site coverage [No optimization]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=1</kbd><br/>
+  Call-site coverage [Dominator approximation]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=2 -opt-style=simple</kbd><br/>
+  Call-site coverage [Locally optimal]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=2</kbd><br/>
+</p>
+
+<p>Finally, the flag <kbd>-complete-exe</kbd> will cause CSI to optimize
+instrumentation such that full coverage data is only guaranteed under the
+assumption that the program always terminates normally (i.e., by returning from
+the <kbd>main</kbd> function).  This facilitates more efficient instrumentation,
+but means that crashing executions may result in incomplete coverage data.  By
+default, <kbd>csi-cc</kbd> optimizes instrumentation pessimistically assuming
+that the program could crash at any statement.</p>
+
+<hr/>
+<table class="toptable"><tr>
+<td class="topprev"><a href="running_schemes.html">&larr; Prev</a></td>
+<td class="topnext"><a href="running_comments.html">Next &rarr;</a></td>
+</tr></table>
+<div class="contents_link"><a href="index.html">Contents</a></div>
+</body>
+</html>

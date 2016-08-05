@@ -57,10 +57,9 @@ static RegisterPass<FuncCoverage> X("fn-coverage",
                 false, false);
 
 
-void FuncCoverage::instrumentFunction(Function &function)
+void FuncCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilder)
 {
   // create new global variable to hold this function's coverage bit
-  DIBuilder debugBuilder(*function.getParent());
   GlobalVariable &theGlobal = getOrCreateGlobal(debugBuilder, function, *tBool, boolType, names.upperShort);
 
   // write out the function name and its arrays

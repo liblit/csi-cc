@@ -50,8 +50,8 @@ namespace csi_inst
   private:
     bool prepareForModule(bool &, const llvm::Module &, const InfoFileOption &);
     void modulePreliminaries(llvm::Module &, llvm::DIBuilder &);
-    void instrumentFunctions(llvm::Module &);
-    virtual void instrumentFunction(llvm::Function &) = 0;
+    void instrumentFunctions(llvm::Module &, llvm::DIBuilder &);
+    virtual void instrumentFunction(llvm::Function &, llvm::DIBuilder &) = 0;
 
   protected:
     const CoveragePassNames &names;

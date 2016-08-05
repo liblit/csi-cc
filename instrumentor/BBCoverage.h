@@ -24,9 +24,19 @@
 
 #include "LocalCoveragePass.h"
 
+#include <llvm/Analysis/LoopInfo.h>
+
 #include "llvm_proxy/CFG.h"
 #include "llvm_proxy/DebugInfo.h"
 #include "llvm_proxy/Instructions.h"
+
+#include <map>
+#include <set>
+#include <fstream>
+
+namespace llvm {
+  class DIBuilder;
+}
 
 namespace csi_inst {
 
@@ -44,8 +54,10 @@ private:
   void writeOneBB(llvm::BasicBlock* theBB, unsigned int index,
                   bool isInstrumented=true);
   
+  std::set<llvm::BasicBlock*> getOptimizedInstrumentation(llvm::Function& F);
+  
   // Instrument each function with coverage for each basic block
-  void instrumentFunction(llvm::Function &);
+  void instrumentFunction(llvm::Function &, llvm::DIBuilder &debugBuilder);
 
 public:
   static const CoveragePassNames names;

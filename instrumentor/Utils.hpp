@@ -68,6 +68,10 @@ inline llvm::BasicBlock::iterator prevInst(llvm::Instruction* const instruction)
 
   llvm::AllocaInst *createZeroedLocalArray(llvm::Function &, llvm::ArrayType &, const std::string &name, llvm::DIBuilder &, const llvm::DIType &, bool);
 
+  // We don't yet require C++11, so we'll use our own "to_string" functions
+  std::string to_string(int val);
+  std::string to_string(unsigned int val);
+
 } // end csi_inst namespace
 
 #if LLVM_VERSION < 30300

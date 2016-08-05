@@ -30,7 +30,7 @@ from errno import ENOENT
 from inspect import getargspec
 from itertools import chain, imap, starmap
 from os import environ, remove, mkdir
-from os.path import basename, splitext
+from os.path import basename, join, splitext
 from pipes import quote
 from shlex import split
 from subprocess import CalledProcessError, check_call
@@ -554,17 +554,21 @@ class Driver(object):
     #  compilation helpers
     #
 
+    @staticmethod
+    def __llvmBin(command):
+        return join('@LLVM_BINDIR@', command)
+
     def sourceToBitcodeCommand(self, inputFile, outputFile, args):
         """command line for building bitcode from source code"""
         return chain(
-            ('clang', '-emit-llvm', '-c', '-o', outputFile),
+            (self.__llvmBin('clang'), '-emit-llvm', '-c', '-o', outputFile),
             self.__expandArgs(args, Stages.PREPROCESSOR | Stages.COMPILER, {inputFile: None}),
             )
 
     def variousToObjectCommand(self, inputFile, outputFile, intermediateFile, forStages, args, targetFlag):
         """command line for building native object code from various other formats"""
         return chain(
-            ('clang', targetFlag, '-o', outputFile),
+            (self.__llvmBin('clang'), targetFlag, '-o', outputFile),
             self.__expandArgs(args, Stages.ASSEMBLER.union(forStages), {inputFile: intermediateFile}),
             )
 
@@ -573,7 +577,7 @@ class Driver(object):
         # pylint: disable=W0613
         __pychecker__ = 'unusednames=inputFile'
         wrapper = split(environ.get('OPT_WRAPPER', ''), comments=False)
-        prelude = ('opt', '-o', instrumented, uninstrumented)
+        prelude = (self.__llvmBin('opt'), '-o', instrumented, uninstrumented)
         phases = self.getExtraOptArgs()
         command = chain(wrapper, prelude, phases)
         self.run(command)
@@ -620,7 +624,7 @@ class Driver(object):
 
     def objectsToLinkedCommand(self, outputFile, args):
         """command line for building native executable from native objects"""
-        prelude = ('clang', '-o', outputFile)
+        prelude = (self.__llvmBin('clang'), '-o', outputFile)
         objectsForInputs = dict((inputFile, self.__makeLinkable(inputFile, args)) for inputFile in self.__inputFiles)
         expanded = self.__expandArgs(args, Stages.LINKER, objectsForInputs)
         return chain(prelude, expanded)
@@ -656,7 +660,7 @@ class Driver(object):
 
     def __buildPreprocessed(self, args):
         """preprocess, but do not compile"""
-        prelude = ('clang', '-E')
+        prelude = (self.__llvmBin('clang'), '-E')
         outputFlags = ('-o', self.__outputFile) if self.__outputFile else ()
         userArgs = self.__expandArgs(args)
         command = chain(prelude, outputFlags, userArgs)
@@ -664,7 +668,7 @@ class Driver(object):
 
     def __buildHelp(self, args):
         """print help information; do not build anything"""
-        prelude = ('clang',)
+        prelude = (self.__llvmBin('clang'),)
         userArgs = self.__expandArgs(args, Stages.HELP)
         command = chain(prelude, userArgs)
         self.run(command)

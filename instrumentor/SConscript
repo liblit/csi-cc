@@ -10,7 +10,16 @@ lenv = env.Clone(
     INCPREFIX='-isystem ',
 )
 
-if not lenv.GetOption('help'):
+if 'GAMSDIR' in lenv:
+    lenv.AppendUnique(
+        CPPDEFINES='USE_GAMS',
+        CPPPATH=(
+            '$GAMSDIR/apifiles/C++/api',
+            '$GAMSDIR/apifiles/C/api'
+        ),
+    )
+
+if not (lenv.GetOption('help') or lenv.GetOption('clean')):
     llvm_version = lenv['LLVM_version']
     if not '3.1' <= llvm_version < '3.6':
         from SCons import Warnings
@@ -57,21 +66,50 @@ map(Glob, (
 ########################################################################
 
 
+if "GAMSDIR" in lenv:
+  genv = env.Clone(
+      INCPREFIX='-isystem ',
+      CPPPATH=['$GAMSDIR/apifiles/C++/api', \
+               '$GAMSDIR/apifiles/C/api'
+               ],
+  )
+  genv.AppendUnique(CCFLAGS='-Wno-unused-parameter')
+  
+  GamsAPIDir = genv.Dir('$GAMSDIR/apifiles')
+  GamsCode = File(['C++/api/gamsxco.cpp',
+                   'C++/api/gdxco.cpp',
+                   'C++/api/optco.cpp',
+                   'C/api/gamsxcc.c',
+                   'C/api/gdxcc.c',
+                   'C/api/optcc.c'
+                   ], GamsAPIDir)
+  
+  GamsObjs = [genv.SharedObject(Dir('.').File(src.target_from_source('', '.os').name), src) for src in GamsCode]
+
 sources = [
     "BBCoverage.cpp",
     "CallCoverage.cpp",
+    "CoverageOptimization.cpp",
+    "CoverageOptimizationGraph.cpp",
     "CoveragePass.cpp",
+    "DominatorOptimizationGraph.cpp",
     "ExtrinsicCalls.cpp",
     "FuncCoverage.cpp",
     "InfoFileOption.cpp",
     "InstrumentationData.cpp",
     "LocalCoveragePass.cpp",
+    "NaiveCoverageSet.cpp",
+    "NaiveOptimizationGraph.cpp",
+    "OptimizationOption.cpp",
     "PathNumbering.cpp",
     "PathTracing.cpp",
     "PrepareCSI.cpp",
     "SilentInternalOption.cpp",
     "Utils.cpp",
 ]
+
+if 'GAMSDIR' in lenv:
+    sources += ["GAMSUtils.cpp"] + GamsObjs
 
 csiInstrumentor, = lenv.SharedLibrary('#Release/CSI', sources)
 

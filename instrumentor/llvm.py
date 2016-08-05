@@ -54,6 +54,7 @@ def generate(env):
             'CheckLLVMBinDir': check_llvm_bindir,
             'CheckLLVMVersion': check_llvm_version,
             },
+        clean=False,
         help=False,
     )
     conf.CheckLLVMVersion()

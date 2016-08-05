@@ -37,6 +37,8 @@
 #include <llvm/Target/TargetData.h>
 #endif
 
+#include <sstream>
+
 using namespace csi_inst;
 using namespace llvm;
 using namespace std;
@@ -217,4 +219,22 @@ AllocaInst *csi_inst::createZeroedLocalArray(Function &function, ArrayType &arra
 
   // return allocated array to caller for further use
   return arrayAllocation;
+}
+
+namespace csi_inst{
+  template<typename T>
+  static string to_string(T val){
+    static stringstream theStream;
+    theStream.str(string());
+    theStream << val;
+    return(theStream.str());
+  }
+}
+
+string csi_inst::to_string(int val){
+  return(csi_inst::to_string<int>(val));
+}
+
+string csi_inst::to_string(unsigned int val){
+  return(csi_inst::to_string<unsigned int>(val));
 }

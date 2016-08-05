@@ -23,6 +23,10 @@ opts.AddVariables(
                  help='path to alternate C++ compiler',
                  default=None,
                  validator=pathIsExecutable),
+    PathVariable(key='GAMSDIR',
+                 help='path to GAMS installation directory',
+                 default=None,
+                 validator=PathVariable.PathIsDir),
     BoolVariable(key='DEBUG',
                  help='Compile with extra information for debugging',
                  default=False),
@@ -32,7 +36,7 @@ opts.AddVariables(
 )
 env = Environment(
     options=opts,
-    tools=('default', 'llvm'),
+    tools=('default', 'llvm', 'textfile'),
     toolpath=('instrumentor',),
 )
 opts.Save('.scons-config', env)
@@ -58,6 +62,7 @@ env = env.Clone(
         '-Wextra',
         '-Werror',
         '-Wformat=2',
+        '-Wno-deprecated-declarations',
         '${("", "-g")[DEBUG]}',
     ),
 )

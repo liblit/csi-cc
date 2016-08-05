@@ -14,7 +14,7 @@
 <hr/>
 <h1>Building CSI</h1>
 <hr class="half"/>
-<h3>Additional Comments and Suggestions</h3>
+<h3>Optional Build Configuration, Additional Comments, and Suggestions</h3>
 <p>The following are some suggestions regarding ways things could go wrong while
 building CSI, and some additional information about build options.</p>
 
@@ -38,6 +38,22 @@ this means that your LLVM installation isn’t built as a shared object.  This
 will likely only happen if you built LLVM from source.  Your configure command
 when building LLVM should look something like<br/>
 <kbd class="indent">configure --enable-shared</kbd></p>
+
+<p>CSI is capable of aggressive optimization for program coverage
+instrumentation schemes.  Specifically, if you are hoping to use fully-optimal
+instrumentation for program coverage (see the
+<a href="running_optimization.html">coverage optimization</a> page), you will
+need to build CSI with support for connecting to the
+<a href="https://www.gams.com/">GAMS</a> optimization framework.  Naturally,
+you first need to have <a href="https://www.gams.com/">GAMS</a> installed.
+Then, you can tell CSI where to find your
+<a href="https://www.gams.com/">GAMS</a> installation by a command like<br/>
+<kbd class="indent">scons GAMSDIR=/path/to/GAMS</kbd><br/>
+Note that this path should point to the primary
+<a href="https://www.gams.com/">GAMS</a> installation directory, which contains
+the <kbd>gams</kbd> executable, as well as a subdirectory called
+<kbd>apifiles/</kbd>.</p>
+
 <hr/>
 <table class="toptable"><tr>
 <td class="topprev"><a href="building.html">&larr; Prev</a></td>

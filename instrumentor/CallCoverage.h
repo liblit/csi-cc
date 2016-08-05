@@ -29,6 +29,10 @@
 #include "llvm_proxy/DebugInfo.h"
 #include "llvm_proxy/Instructions.h"
 
+#include <map>
+#include <set>
+#include <fstream>
+
 namespace csi_inst {
 
 // ---------------------------------------------------------------------------
@@ -38,6 +42,18 @@ class CallCoverage : public LocalCoveragePass {
 private:
   static Options options;
 
+  // the mapping from functions to the list of instrumented call-sites
+  std::map<llvm::Function*, std::set<llvm::CallInst*> > functionCalls;
+  
+  // select one call instruction for each basic block chosen to instrument
+  // NOTE: each basic block *must* have at least one call; this is an error,
+  // and is not ignored
+  std::set<llvm::CallInst*> selectCalls(const std::set<llvm::BasicBlock*>& bbs);
+  // get the set of basic blocks containing the call instructions (the resulting
+  // set may be smaller if some calls share basic blocks)
+  std::set<llvm::BasicBlock*> getBBsForCalls(
+     const std::set<llvm::CallInst*>& calls);
+  
   // Perform module-level tasks, open streams, and instrument each function
   bool runOnModule(llvm::Module &M);
   
@@ -46,7 +62,7 @@ private:
                     bool isInstrumented=true);
   
   // Instrument each function for coverage on each call
-  void instrumentFunction(llvm::Function &);
+  void instrumentFunction(llvm::Function &, llvm::DIBuilder &debugBuilder);
   
 public:
   static const CoveragePassNames names;

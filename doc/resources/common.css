@@ -84,3 +84,6 @@ img.center {
   margin-left: auto;
   margin-right: auto;
 }
+th.nowrap {
+  white-space: nowrap;
+}

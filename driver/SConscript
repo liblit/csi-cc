@@ -1,2 +1,10 @@
-installed = InstallAs(target="#Release/csi-cc", source="csi-driver.py")
-Default(installed)
+Import('env')
+
+helper = env.Substfile('driver.py.in', SUBST_DICT={'@LLVM_BINDIR@': env.subst('$LLVM_bindir')})
+Default(helper)
+
+driver = env.Substfile('#Release/csi-cc',
+                       'csi-driver.py.in',
+                       SUBST_DICT={"@USE_GAMS@": str("GAMSDIR" in env),
+                                   "@GAMS_INSTALL_DIR@": env.get("GAMSDIR", "")})
+AddPostAction(driver, Chmod('$TARGET', 0755))

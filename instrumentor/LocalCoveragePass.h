@@ -24,6 +24,7 @@
 #define CSI_LOCAL_COVERAGE_PASS_H
 
 #include "CoveragePass.h"
+#include "OptimizationOption.h"
 #include "SilentInternalOption.h"
 
 #include "llvm_proxy/BasicBlock.h"
@@ -46,8 +47,9 @@ namespace csi_inst
   protected:
     struct Options : public CoveragePass::Options
     {
+      OptimizationOption optimizationLevel;
       SilentInternalOption silentInternal;
-      Options(const CoveragePassNames &);
+      Options(const CoveragePassNames &, const char descriptionO1[]);
     };
 
     LocalCoveragePass(char &, const CoveragePassNames &);
@@ -58,7 +60,7 @@ namespace csi_inst
       llvm::AllocaInst &local;
     };
 
-    CoverageArrays prepareFunction(llvm::Function &, unsigned, const SilentInternalOption &);
+    CoverageArrays prepareFunction(llvm::Function &, unsigned, const SilentInternalOption &, llvm::DIBuilder &debugBuilder);
     void insertArrayStoreInsts(const CoverageArrays &, unsigned, llvm::IRBuilder<> &) const;
 
   public:

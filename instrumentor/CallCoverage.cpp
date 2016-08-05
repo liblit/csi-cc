@@ -24,6 +24,7 @@
 #include "CallCoverage.h"
 #include "CoveragePassNames.h"
 #include "ExtrinsicCalls.h"
+#include "CoverageOptimization.h"
 #include "Utils.hpp"
 
 #include <llvm/Support/Debug.h>
@@ -46,7 +47,8 @@ const CoveragePassNames CallCoverage::names = {
 };
 
 CallCoverage::Options CallCoverage::options(
-   names
+   names,
+   "multiple calls within a single basic block"
 );
 
 // Register call coverage as a pass
@@ -55,6 +57,32 @@ static RegisterPass<CallCoverage> X("call-coverage",
                 "Insert call coverage instrumentation",
                 false, false);
 
+
+set<CallInst*> CallCoverage::selectCalls(const set<BasicBlock*>& bbs)
+{
+  set<CallInst*> result;
+  for (set<BasicBlock*>::iterator bb = bbs.begin(), bbe = bbs.end(); bb != bbe; ++bb)
+    {
+      const ExtrinsicCalls<BasicBlock::iterator> calls = extrinsicCalls(**bb);
+      if (calls.begin() != calls.end())
+	result.insert(calls.begin());
+      else
+	report_fatal_error("attempt to select a call instruction in basic block '" + (*bb)->getName() + "' which has none");
+    }
+  return result;
+}
+
+
+set<BasicBlock*> CallCoverage::getBBsForCalls(const set<CallInst*>& calls){
+  set<BasicBlock*> result;
+  for (set<CallInst*>::iterator i = calls.begin(), e = calls.end(); i != e; ++i)
+    {
+      if((*i)->getParent() == NULL)
+        report_fatal_error("call coverage encountered a call instruction not embedded in a basic block");
+      result.insert((*i)->getParent());
+    }
+  return result;
+}
 
 void CallCoverage::writeOneCall(CallInst* theCall, unsigned int index,
                                 bool isInstrumented){
@@ -68,7 +96,7 @@ void CallCoverage::writeOneCall(CallInst* theCall, unsigned int index,
              << fnName << '\n';
 }
 
-void CallCoverage::instrumentFunction(Function &function)
+void CallCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilder)
 {
   // find all of the callsites in function
   set<CallInst*> fCalls;
@@ -76,6 +104,63 @@ void CallCoverage::instrumentFunction(Function &function)
   for (ExtrinsicCalls<inst_iterator>::iterator call = calls.begin(); call != calls.end(); ++call)
     fCalls.insert(call);
 
+  // get the calls we'll use based on the optimization level
+  switch(options.optimizationLevel)
+    {
+    case OptimizationOption::O0:
+      break;
+    case OptimizationOption::O1:
+    case OptimizationOption::O2:
+    case OptimizationOption::O3: {
+      set<BasicBlock*> callBBs = getBBsForCalls(fCalls);
+      if(options.optimizationLevel == OptimizationOption::O1){
+        fCalls = selectCalls(callBBs);
+        if(fCalls.size() != callBBs.size())
+          report_fatal_error("call coverage encountered an internal error "
+                             "selecting single calls for basic blocks in "
+                             "function '" + function.getName() + "'");
+        break;
+      }
+      
+      // here: O2 or O3
+      CoverageOptimizationData& sgData =
+         getAnalysis<CoverageOptimizationData>(function);
+      
+      set<BasicBlock*> allBBs;
+      for(Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
+        allBBs.insert(i);
+      
+      set<BasicBlock*> result;
+      if(options.optimizationLevel == OptimizationOption::O2){
+        // here: O2
+        // currently using (I=calls, D=calls) for less reliance on LLVM BB costs
+        result = sgData.getOptimizedProbes(&function, &callBBs, &callBBs);
+      }
+      else{
+        // here: O3
+        // currently using (I=calls, D=calls) for less reliance on LLVM BB costs
+#ifdef USE_GAMS
+        result = sgData.getOptimizedProbes(&function, &callBBs, &callBBs, true);
+#else
+        report_fatal_error("csi build does not support optimization level 3. "
+                           "csi must be built with GAMS optimization enabled");
+#endif
+      }
+
+      DEBUG(dbgs() << "instrumenting: " << setBB_asstring(result) << "\n");
+
+      fCalls = selectCalls(result);
+      if(fCalls.size() != result.size())
+        report_fatal_error("call coverage encountered an internal error "
+                           "selecting single calls for basic blocks in "
+                           "function '" + function.getName() + "'");
+      break;
+    }
+    default:
+      report_fatal_error("internal error allowing bad call coverage "
+                         "optimization value");
+    }
+  
   // make globals and do instrumentation for each function
   unsigned int arraySize = fCalls.size();
   if (arraySize < 1)
@@ -83,7 +168,8 @@ void CallCoverage::instrumentFunction(Function &function)
 
   const CoverageArrays arrays = prepareFunction(function,
                                                 arraySize,
-                                                options.silentInternal);
+                                                options.silentInternal,
+                                                debugBuilder);
   
   // instrument each site
   unsigned int curIdx = 0;
@@ -100,12 +186,6 @@ void CallCoverage::instrumentFunction(Function &function)
       // write out the instrumentation site's static location details
       writeOneCall(&call, curIdx++, true);
     }
-  
-  // write out uninstrumented sites
-  unsigned int uninstIdx = 1;
-  for (ExtrinsicCalls<inst_iterator>::iterator call = calls.begin(); call != calls.end(); ++call)
-    if (!fCalls.count(call))
-      writeOneCall(call, uninstIdx++, false);
 }
 
 

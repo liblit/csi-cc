@@ -92,14 +92,14 @@ void csi_inst::CoveragePass::modulePreliminaries(Module &module, DIBuilder &debu
 
 
 // make globals and do instrumentation for each function
-void csi_inst::CoveragePass::instrumentFunctions(Module &module)
+void csi_inst::CoveragePass::instrumentFunctions(Module &module, DIBuilder &debugBuilder)
 {
   const PrepareCSI& plan = getAnalysis<PrepareCSI>();
   for (Module::iterator function = module.begin(), end = module.end(); function != end; ++function)
     if (!function->isDeclaration() && !function->isIntrinsic() &&
 	!function->getName().substr(0, 5).equals("__PT_") &&
 	plan.hasInstrumentationType(*function, names.upperShort))
-      instrumentFunction(*function);
+      instrumentFunction(*function, debugBuilder);
 }
 
 
@@ -120,7 +120,7 @@ bool csi_inst::CoveragePass::runOnModuleOnce(Module &module, const InfoFileOptio
   modulePreliminaries(module, debugBuilder);
   
   // make globals and do instrumentation for each function
-  instrumentFunctions(module);
+  instrumentFunctions(module, debugBuilder);
   
   infoStream.close();
   return true;
