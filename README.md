@@ -3,11 +3,11 @@
 An instrumenting compiler for lightweight program tracing. The mechanisms were originally proposed in
 
 > P. Ohmann and B. Liblit.
-“[Lightweight control-flow instrumentation and postmortem analysis in support of debugging](http://pages.cs.wisc.edu/~liblit/ase-2016/).”
-Automated Software Engineering Journal (to appear), 2016.  Springer.
+“[Lightweight control-flow instrumentation and postmortem analysis in support of debugging](http://pages.cs.wisc.edu/~liblit/ase-journal-2016/).”
+Automated Software Engineering Journal, 2016.  Springer.
 DOI: 10.1007/s10515-016-0190-1
 
-Preprint: http://pages.cs.wisc.edu/~liblit/ase-2016/ase-2016.pdf
+Preprint: http://pages.cs.wisc.edu/~liblit/ase-journal-2016/ase-journal-2016.pdf
 
 ## Current Release
 
