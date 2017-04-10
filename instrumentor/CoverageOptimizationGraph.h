@@ -23,7 +23,10 @@
 #ifndef CSI_COVERAGE_OPT_GRAPH_H
 #define CSI_COVERAGE_OPT_GRAPH_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <llvm/Analysis/BlockFrequencyInfo.h>
+#pragma GCC diagnostic pop
 
 #include <map>
 #include <set>

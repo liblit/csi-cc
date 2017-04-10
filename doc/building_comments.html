@@ -54,6 +54,13 @@ Note that this path should point to the primary
 the <kbd>gams</kbd> executable, as well as a subdirectory called
 <kbd>apifiles/</kbd>.</p>
 
+<p>If building on OSX, note that many pre-packaged distributions of LLVM do not
+include a full LLVM shared object for linking with CSI.  If you see linker
+errors when building with pre-installed LLVM, please try building LLVM from
+source.  The LLVM project provides guides for installing
+<a href="http://llvm.org/docs/GettingStarted.html">LLVM</a> and
+<a href="http://clang.llvm.org/get_started.html">Clang</a> from source.</p>
+
 <hr/>
 <table class="toptable"><tr>
 <td class="topprev"><a href="building.html">&larr; Prev</a></td>

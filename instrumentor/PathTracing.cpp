@@ -38,12 +38,15 @@
 #include "PrepareCSI.h"
 #include "Utils.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
+  #pragma GCC diagnostic pop
 
 #include "Versions.h"
 #include "llvm_proxy/DIBuilder.h"
@@ -66,6 +69,10 @@ unsigned int PATHS_SIZE;
 // a special argument parser for unsigned longs
 class ULongParser : public cl::parser<unsigned long> {
 public:
+#if LLVM_VERSION >= 30700
+  using parser<unsigned long>::parser;
+#endif
+
   // parse - Return true on error.
   bool parse(cl::Option &O, const StringRef ArgName, const StringRef &Arg,
              unsigned long &Val){
@@ -621,7 +628,7 @@ void PathTracing::insertCounterIncrement(Value* incValue,
                                           BasicBlock::iterator insertPoint,
                                           BLInstrumentationDag* dag) {
   // first, find out the current location
-  LoadInst* curLoc = new LoadInst(dag->getCurIndex(), "curIdx", insertPoint);
+  LoadInst* curLoc = new LoadInst(dag->getCurIndex(), "curIdx", &*insertPoint);
   
   // Counter increment for array
   if( dag->getNumberOfPaths() <= HASH_THRESHHOLD ) {
@@ -633,26 +640,26 @@ void PathTracing::insertCounterIncrement(Value* incValue,
 
     GetElementPtrInst* pcPointer =
       GetElementPtrInst::CreateInBounds(dag->getCounterArray(), gepIndices,
-					"arrLoc", insertPoint);
+					"arrLoc", &*insertPoint);
 
     // Store back in to the array
-    new StoreInst(incValue, pcPointer, true, insertPoint);
+    new StoreInst(incValue, pcPointer, true, &*insertPoint);
     
     // update the next circular buffer location
     Type* tInt = Type::getInt64Ty(*Context);
     BinaryOperator* addLoc = BinaryOperator::Create(Instruction::Add,
                                                     curLoc,
                                                     ConstantInt::get(tInt, 1),
-                                                    "addLoc", insertPoint);
-    Instruction* atEnd = new ICmpInst(insertPoint, CmpInst::ICMP_EQ, curLoc,
+                                                    "addLoc", &*insertPoint);
+    Instruction* atEnd = new ICmpInst(&*insertPoint, CmpInst::ICMP_EQ, curLoc,
                                ConstantInt::get(tInt, dag->getCounterSize()-1),
                                "atEnd");
-    Instruction* nextLoc = SelectInst::Create(atEnd, ConstantInt::get(tInt, 0),
-                                              addLoc, "nextLoc", insertPoint);
+    Instruction* nextLoc = SelectInst::Create(&*atEnd, ConstantInt::get(tInt, 0),
+                                              addLoc, "nextLoc", &*insertPoint);
     
-    new StoreInst(nextLoc, dag->getCurIndex(), true, insertPoint);
+    new StoreInst(nextLoc, dag->getCurIndex(), true, &*insertPoint);
     new StoreInst(ConstantInt::get(tInt, 0), this->getPathTracker(), true,
-                  insertPoint);
+                  &*insertPoint);
   }
   else {
     // Counter increment for hash would have gone here (should actually be
@@ -662,6 +669,16 @@ void PathTracing::insertCounterIncrement(Value* incValue,
     exit(1);
   }
 }
+
+static BasicBlock::iterator getTerminator(BLInstrumentationNode &node)
+{
+  return node.getBlock()->getTerminator()
+#if LLVM_VERSION >= 30800
+    ->getIterator()
+#endif
+    ;
+}
+
 
 void PathTracing::insertInstrumentationStartingAt(BLInstrumentationEdge* edge,
                                                    BLInstrumentationDag* dag) {
@@ -716,26 +733,26 @@ void PathTracing::insertInstrumentationStartingAt(BLInstrumentationEdge* edge,
 
     BasicBlock::iterator insertPoint = atBeginning ?
       instrumentNode->getBlock()->getFirstInsertionPt() :
-      instrumentNode->getBlock()->getTerminator();
+      getTerminator(*instrumentNode);
 
     // add information from the bottom edge, if it exists
     if( bottom->getIncrement() ) {
       Instruction* oldValue = new LoadInst(this->getPathTracker(),
-                                           "oldValBackSplit", insertPoint);
+                                           "oldValBackSplit", &*insertPoint);
       Instruction* newValue = BinaryOperator::Create(Instruction::Add,
                                  oldValue, createIncrementConstant(bottom),
-                                 "pathNumber", insertPoint);
-      new StoreInst(newValue, this->getPathTracker(), true, insertPoint);
+                                 "pathNumber", &*insertPoint);
+      new StoreInst(newValue, this->getPathTracker(), true, &*insertPoint);
     }
 
     if(!NoArrayWrites){
       Instruction* curValue = new LoadInst(this->getPathTracker(),
-                                           "curValBackSplit", insertPoint);
+                                           "curValBackSplit", &*insertPoint);
       insertCounterIncrement(curValue, insertPoint, dag);
     }
     
     new StoreInst(createIncrementConstant(top), this->getPathTracker(), true,
-                  insertPoint);
+                  &*insertPoint);
     
     // Check for path counter increments: we would never expect the top edge to
     // also be a counter increment, but we'll handle it anyways
@@ -743,7 +760,7 @@ void PathTracing::insertInstrumentationStartingAt(BLInstrumentationEdge* edge,
       DEBUG(dbgs() << "WARNING: a top counter increment encountered\n");
       if(!NoArrayWrites){
         insertCounterIncrement(createIncrementConstant(top),
-                               instrumentNode->getBlock()->getTerminator(),dag);
+                               getTerminator(*instrumentNode), dag);
       }
     }
   }
@@ -752,26 +769,26 @@ void PathTracing::insertInstrumentationStartingAt(BLInstrumentationEdge* edge,
   else {
     BasicBlock::iterator insertPoint = atBeginning ?
       instrumentNode->getBlock()->getFirstInsertionPt() :
-      instrumentNode->getBlock()->getTerminator();
+      getTerminator(*instrumentNode);
 
     if(edge->isInitialization()){ // initialize path number
       new StoreInst(createIncrementConstant(edge), this->getPathTracker(), true,
-                    insertPoint);
+                    &*insertPoint);
     }
     else if(edge->getIncrement()){// increment path number
       Instruction* oldValue = new LoadInst(this->getPathTracker(),
-                                           "oldVal", insertPoint);
+                                           "oldVal", &*insertPoint);
       Instruction* newValue = BinaryOperator::Create(Instruction::Add,
                                  oldValue, createIncrementConstant(edge),
-                                 "pathNumber", insertPoint);
-      new StoreInst(newValue, this->getPathTracker(), true, insertPoint);
+                                 "pathNumber", &*insertPoint);
+      new StoreInst(newValue, this->getPathTracker(), true, &*insertPoint);
     }
 
     // Check for path counter increments (function exit)
     if(edge->isCounterIncrement()){
       if(!NoArrayWrites){
         Instruction* curValue = new LoadInst(this->getPathTracker(),
-                                             "curVal", insertPoint);
+                                             "curVal", &*insertPoint);
         insertCounterIncrement(curValue, insertPoint, dag);
       }
     }
@@ -820,8 +837,12 @@ bool PathTracing::splitCritical(BLInstrumentationEdge* edge,
 
   TerminatorInst* terminator = sourceBlock->getTerminator();
 
-  if( SplitCriticalEdge(terminator, succNum, this, false)) {
-    BasicBlock* newBlock = terminator->getSuccessor(succNum);
+#if LLVM_VERSION < 30700
+  BasicBlock * const newBlock = SplitCriticalEdge(terminator, succNum, this, false);
+#else
+  BasicBlock * const newBlock { SplitCriticalEdge(terminator, succNum) };
+#endif  
+  if (newBlock) {
     dag->splitUpdate(edge, newBlock);
     return(true);
   } else
@@ -849,7 +870,7 @@ static void writeBBLineNums(BasicBlock* bb,
         continue;
     
     dbLoc = i->getDebugLoc();
-    if(!dbLoc.isUnknown()){
+    if (!isUnknown(dbLoc)) {
       stream << '|' << dbLoc.getLine(); // << ':' << dbLoc.getCol();
       any = true;
     }
@@ -1035,31 +1056,45 @@ bool PathTracing::runOnFunction(Function &F) {
     
     // create debug info for new variables
     DIBuilder Builder(*F.getParent());
-    DIType intType = Builder.createBasicType("__pt_int", 64, 64, dwarf::DW_ATE_signed);
+#if LLVM_VERSION < 30700
+    const DIType intType = Builder.createBasicType("__pt_int", 64, 64, dwarf::DW_ATE_signed);
     const DIType arrType = createArrayType(Builder, PATHS_SIZE, intType);
+#else
+    DIType * const intType { createBasicType(Builder, "__pt_int", 64, dwarf::DW_ATE_signed) };
+    DIType * const arrType { createArrayType(Builder, PATHS_SIZE, intType) };
+#endif
     
     // get the debug location of any instruction in this basic block--this will
     // use the same info.  If there is none, technically we should build it, but
     // that's a huge pain (if it's possible) so I just give up right now
     const DebugLoc dbLoc = findEarlyDebugLoc(F, SilentInternal);
-    if (!dbLoc.isUnknown()) {
-      DIVariable arrDI = Builder.createLocalVariable(
-                            (unsigned)dwarf::DW_TAG_auto_variable,
-                            DIDescriptor(dbLoc.getScope(*Context)),
+    if (!isUnknown(dbLoc)) {
+#if LLVM_VERSION < 30700
+      typedef DIVariable Info;
+      const DIDescriptor scope(dbLoc.getScope(*Context));
+      const DIFile file(dbLoc.getScope(*Context));
+#else
+      typedef DILocalVariable *Info;
+      DIScope * const scope { dbLoc->getScope() };
+      DIFile * const file { scope->getFile() };
+#endif
+      const Info arrDI = createAutoVariable(
+                            Builder,
+			    scope,
                             "__PT_counter_arr",
-                            DIFile(dbLoc.getScope(*Context)), 0, arrType, true);
+			    file, 0, arrType, true);
       insertDeclare(Builder, arrInst, arrDI, dbLoc, entryInst);
-      DIVariable idxDI = Builder.createLocalVariable(
-                            (unsigned)dwarf::DW_TAG_auto_variable,
-                            DIDescriptor(dbLoc.getScope(*Context)),
+      const Info idxDI = createAutoVariable(
+                            Builder,
+                            scope,
                             "__PT_counter_idx",
-                            DIFile(dbLoc.getScope(*Context)), 0, intType, true);
+                            file, 0, intType, true);
       insertDeclare(Builder, idxInst, idxDI, dbLoc, entryInst);
-      DIVariable trackDI = Builder.createLocalVariable(
-                             (unsigned)dwarf::DW_TAG_auto_variable,
-                             DIDescriptor(dbLoc.getScope(*Context)),
+      const Info trackDI = createAutoVariable(
+                             Builder,
+                             scope,
                              "__PT_current_path",
-                             DIFile(dbLoc.getScope(*Context)), 0, intType,
+                             file, 0, intType,
                              true);
       insertDeclare(Builder, trackInst, trackDI, dbLoc, entryInst);
     }

@@ -23,6 +23,7 @@
 #define CSI_FN_COVERAGE_H
 
 #include "CoveragePass.h"
+#include "PassName.h"
 
 #include <llvm/Pass.h>
 
@@ -54,7 +55,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   FuncCoverage() : CoveragePass(ID, names) {}
 
-  virtual const char *getPassName() const {
+  virtual PassName getPassName() const {
     return "Interprocedural Function Coverage Instrumentation";
   }
 };

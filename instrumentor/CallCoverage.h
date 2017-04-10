@@ -24,6 +24,7 @@
 
 #include "ExtrinsicCalls.h"
 #include "LocalCoveragePass.h"
+#include "PassName.h"
 
 #include "llvm_proxy/CFG.h"
 #include "llvm_proxy/DebugInfo.h"
@@ -69,7 +70,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   CallCoverage() : LocalCoveragePass(ID, names) {}
 
-  virtual const char *getPassName() const {
+  virtual PassName getPassName() const {
     return "Intra/Interprocedural Call Coverage Instrumentation";
   }
 };

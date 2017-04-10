@@ -23,6 +23,7 @@
 
 #include "CoveragePassNames.h"
 #include "InfoFileOption.h"
+#include "optionName.h"
 #include "Utils.hpp"
 
 #include <llvm/Support/Debug.h>
@@ -37,7 +38,7 @@ csi_inst::InfoFileOption::InfoFileOption(const CoveragePassNames &names)
   : lowerShortName(names.lowerShort),
     flag(names.lowerShort + "-info-file"),
     description("The path to the " + names.lowerFull + " coverage info file."),
-    option(flag.c_str(),
+    option(optionName(flag),
 	   cl::desc(description.c_str()),
 	   cl::value_desc("file_path"))
 {

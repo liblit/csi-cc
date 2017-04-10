@@ -34,6 +34,7 @@
 #ifndef CSI_PATH_TRACING_H
 #define CSI_PATH_TRACING_H
 
+#include "PassName.h"
 #include "PathNumbering.h"
 
 #include <llvm/Pass.h>
@@ -316,7 +317,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   PathTracing() : ModulePass(ID) {}
 
-  virtual const char *getPassName() const {
+  virtual PassName getPassName() const {
     return "Intraprocedural Path Tracing";
   }
   

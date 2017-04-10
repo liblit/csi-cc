@@ -20,8 +20,12 @@
 //===----------------------------------------------------------------------===//
 #include "../Versions.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #if LLVM_VERSION < 30300
   #include <llvm/Function.h>
 #else
   #include <llvm/IR/Function.h>
 #endif
+#pragma GCC diagnostic pop

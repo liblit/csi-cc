@@ -47,6 +47,7 @@ namespace csi_inst
       operator llvm::CallInst *() const;
       llvm::CallInst &operator*() const;
       bool operator!=(const iterator &) const;
+      bool operator==(const iterator &) const;
 
     private:
       InstructionIterator current;
@@ -115,7 +116,14 @@ template <typename InstructionIterator> inline
 bool
 csi_inst::ExtrinsicCalls<InstructionIterator>::iterator::operator!=(const iterator &other) const
 {
-  return current != other.current;
+  return !(*this == other);
+}
+
+template <typename InstructionIterator> inline
+bool
+csi_inst::ExtrinsicCalls<InstructionIterator>::iterator::operator==(const iterator &other) const
+{
+  return current == other.current;
 }
 
 

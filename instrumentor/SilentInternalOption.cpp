@@ -21,6 +21,7 @@
 // limitations under the License.
 //===----------------------------------------------------------------------===//
 #include "CoveragePassNames.h"
+#include "optionName.h"
 #include "SilentInternalOption.h"
 
 using namespace llvm;
@@ -30,6 +31,6 @@ using namespace std;
 csi_inst::SilentInternalOption::SilentInternalOption(const CoveragePassNames &names)
   : flag(names.lowerShort + "-silent"),
     description("Silence internal warnings.  Will still print errors that cause " + names.upperShort + " to fail."),
-    option(flag.c_str(), cl::desc(description.c_str()))
+    option(optionName(flag), cl::desc(description.c_str()))
 {
 }

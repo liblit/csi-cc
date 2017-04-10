@@ -23,7 +23,7 @@
 #ifndef CSI_SILENT_INTERNAL_H
 #define CSI_SILENT_INTERNAL_H
 
-#include <llvm/Support/CommandLine.h>
+#include "llvm_proxy/CommandLine.h"
 
 #include <string>
 

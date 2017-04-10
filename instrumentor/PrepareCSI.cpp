@@ -28,12 +28,15 @@
 
 #include "Versions.h"
 
-#include <llvm/Support/CommandLine.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+#pragma GCC diagnostic pop
 
+#include "llvm_proxy/CommandLine.h"
 #include "llvm_proxy/Module.h"
 #include "llvm_proxy/InstIterator.h"
 #include "llvm_proxy/IntrinsicInst.h"
@@ -99,7 +102,7 @@ Function* PrepareCSI::switchIndirect(Function* F, GlobalVariable* switcher,
   BasicBlock* newEntry = BasicBlock::Create(*Context, "newEntry", F);
   vector<Value*> callArgs;
   for(Function::arg_iterator k = F->arg_begin(), ke = F->arg_end(); k != ke; ++k)
-    callArgs.push_back(k);
+    callArgs.push_back(&*k);
   
   // set up the switch
   LoadInst* whichCall = new LoadInst(switcher, "chooseCall", true, newEntry);
@@ -245,8 +248,20 @@ static vector<pair<string, set<set<string> > > > readScheme(istream& in){
   return(result);
 }
 
+static void labelInstructions(Function& F){
+  unsigned int label = 1;
+  for(inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i)
+    attachCSILabelToInstruction(*i, csi_inst::to_string(label++));
+}
+
 // Entry point of the module
 bool PrepareCSI::runOnModule(Module &M){
+  // first, label all instructions in all functions in the module (so later
+  // passes can have a unique identifier for each instruction)
+  for(Module::iterator F = M.begin(), e = M.end(); F != e; ++F)
+    labelInstructions(*F);
+
+  // then, proceed with reading in scheme data
   vector<pair<string, set<set<string> > > > schemeData;
   if(VariantsFile.empty()){
     outs() << "Reading stdin for instrumentation scheme...\n";
@@ -272,14 +287,14 @@ bool PrepareCSI::runOnModule(Module &M){
   Context = &M.getContext();
   
   // Find the matching pattern for each function
-  map<Function*, set<set<string> >*> matches;
+  map<Function*, set<set<string> > > matches;
   for(Module::iterator F = M.begin(), E = M.end(); F != E; ++F){
     if(F->isDeclaration() || F->isIntrinsic())
       continue;
     bool found = false;
     for(vector<pair<string, set<set<string> > > >::iterator i = schemeData.begin(), e = schemeData.end(); i != e; ++i){
       if(patternMatch(F->getName(), i->first)){
-        matches[F] = &(i->second);
+        matches[&*F] = i->second;
         found = true;
         break;
       }
@@ -292,28 +307,27 @@ bool PrepareCSI::runOnModule(Module &M){
   }
 
   // Filter patterns matched to each function, and replicate
-  for(map<Function*, set<set<string> >*>::iterator i = matches.begin(), e = matches.end(); i != e; ++i){
+  for(map<Function*, set<set<string> > >::iterator i = matches.begin(), e = matches.end(); i != e; ++i){
     Function* F = i->first;
     
-    // go through all filters for each possible scheme.  if it passes all
-    // filters, make a replica of this function with those tags on it, and add
-    // that replica to the "replicas" set.  else, print warning
-    set<const set<string>*> replicas;
+    // go through all filters for each possible scheme.  after passing through
+    // all filters, make a replica of this function with those tags on it,
+    // and add that replica to the "replicas" set.  else, print warning
+    set<set<string> > replicas;
     
-    for(set<set<string> >::iterator j = i->second->begin(), je = i->second->end(); j != je; ++j){
+    for(set<set<string> >::iterator j = i->second.begin(), je = i->second.end(); j != je; ++j){
+      set<string> testing = *j;
+
       bool passed = true;
       if(!NoFilter){
         for(vector<FilterFn>::const_iterator fi = Filters.begin(), fe = Filters.end(); fi != fe; ++fi){
-          if(!(*fi)(*j, F)){
+          if((*fi)(testing, F))
             passed = false;
-            break;
-          }
         }
       }
-      if(passed)
-        replicas.insert(&*j);
-      else{
-        outs() << "WARNING: filtered out scheme '";
+      replicas.insert(testing);
+      if(!passed){
+        outs() << "WARNING: filtered scheme '";
         for(set<string>::iterator k = j->begin(), ke = j->end(); k != ke; ++k){
           if(k != j->begin())
             outs() << ",";
@@ -329,8 +343,8 @@ bool PrepareCSI::runOnModule(Module &M){
       continue;
     case 1: {
       // instrument the original body (don't replicate and trampoline)
-      const set<string>* scheme = *(replicas.begin());
-      for(set<string>::iterator j = scheme->begin(), je = scheme->end(); j != je; ++j)
+      const set<string>& scheme = *(replicas.begin());
+      for(set<string>::iterator j = scheme.begin(), je = scheme.end(); j != je; ++j)
         addInstrumentationType(*F, *j);
       break;
     }
@@ -344,15 +358,19 @@ bool PrepareCSI::runOnModule(Module &M){
       
       // make a function for each scheme
       vector<Function*> funcReplicas;
-      for(set<const set<string>*>::iterator j = replicas.begin(), je = replicas.end(); j != je; ++j){
+      for(set<set<string> >::iterator j = replicas.begin(), je = replicas.end(); j != je; ++j){
         ValueToValueMapTy valueMap;
         SmallVector<ReturnInst*, 1> returns;
-        Function* newF = CloneFunction(F, valueMap, false, NULL);
+        Function* newF = CloneFunction(F, valueMap,
+#if LLVM_VERSION < 30900
+				       false,
+#endif
+				       NULL);
 
         string name = F->getName().str();
-        if((*j)->begin() == (*j)->end())
+        if(j->begin() == j->end())
           name += "$none";
-        for(set<string>::iterator k = (*j)->begin(), ke = (*j)->end(); k != ke; ++k){
+        for(set<string>::iterator k = j->begin(), ke = j->end(); k != ke; ++k){
           name += "$" + *k;
           addInstrumentationType(*newF, *k);
         }

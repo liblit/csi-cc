@@ -30,10 +30,10 @@
 namespace csi_inst {
 
 // A vector of filters to apply over proposed schemes and functions they are
-// to be applied to.  Filters do NOT modify the scheme.  If the scheme is dopey,
-// it is simply rejected by returning false.
-// @return true if the scheme passes the filter; false otherwise.
-typedef bool(*FilterFn)(const std::set<std::string>& scheme, llvm::Function* F);
+// to be applied to.  Filters may modify the scheme, but only by removing
+// instrumentors.
+// @return true if the scheme was modified; false otherwise.
+typedef bool(*FilterFn)(std::set<std::string>& scheme, llvm::Function* F);
 extern const std::vector<FilterFn> Filters;
 
 extern const std::set<std::string> Instrumentors;

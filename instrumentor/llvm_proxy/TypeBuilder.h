@@ -25,5 +25,8 @@
 #elif LLVM_VERSION < 30300
   #include <llvm/TypeBuilder.h>
 #else
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-parameter"
   #include <llvm/IR/TypeBuilder.h>
+  #pragma GCC diagnostic pop
 #endif

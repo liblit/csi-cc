@@ -21,7 +21,7 @@
 #ifndef CSI_OPTIMIZATION_LEVEL_H
 #define CSI_OPTIMIZATION_LEVEL_H
 
-#include <llvm/Support/CommandLine.h>
+#include "llvm_proxy/CommandLine.h"
 
 #include <string>
 

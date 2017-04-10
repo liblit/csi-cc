@@ -1,5 +1,7 @@
 Import('env')
 
+import platform
+
 #########################################################################
 #
 #  regression test tools
@@ -20,19 +22,35 @@ env = env.Clone(
     PROGSUFFIX='${CSI_OPTIMIZATION_SUFFIX}$PROGSUFFIX',
     )
 
+# which schemes to verify output for each optimization level
+# (some have non-deterministic output)
+OPT_LEVEL_TO_SCHEMES = {
+    0: ('PT', 'CC', 'BBC', 'FC'),
+    1: ('PT', 'CC', 'FC'),
+    2: ('PT', 'FC'),
+    3: ('PT', 'FC'),
+}
+
 if env['MEMCHECK']:
     env['ENV']['OPT_WRAPPER'] = 'valgrind --tool=memcheck --error-exitcode=26 --leak-check=full'
 
 if 'LLVM_bindir' in env:
     env.PrependENVPath('PATH', env['LLVM_bindir'])
 
+DEFAULT_OPT_LEVELS=[0, 1, 2]
+if 'GAMSDIR' in env:
+    DEFAULT_OPT_LEVELS.append(3)
+
 def ExtractStatic(environ, executable, suffix):
-    extractor = File('#Tools/extract-section')
+    extractor = File('#Tools/extract_section.py')
     check = executable.target_from_source('', '.csi-static-' + suffix)
     environ.Command(check,  (extractor, executable), '$SOURCE --require .debug_' + suffix + ' ${SOURCES[1]} >$TARGET')
     return check
 
-def RunTest(self, basename, sources=None, optLevels=(0,)):
+def __isOSX():
+    return 'darwin' in platform.system().lower()
+
+def RunTest(self, basename, sources=None, optLevels=DEFAULT_OPT_LEVELS):
     for optLevel in optLevels:
         oenv = self.Clone(CSI_OPTIMIZATION_LEVEL=optLevel)
 
@@ -44,16 +62,17 @@ def RunTest(self, basename, sources=None, optLevels=(0,)):
         oenv.Depends((objects, executable), (
             oenv['CC'],
             '#driver/driver.py',
-            '#Release/libCSI.so',
+            '#Release/${SHLIBPREFIX}CSI$SHLIBSUFFIX',
             Value('MEMCHECK=%s' % oenv['MEMCHECK']),
         ))
         oenv.Depends(objects, oenv['CSI_SCHEMA'])
 
         # extract and check static metadata
-        extractor = File('#Tools/extract-section')
-        for scheme in 'PT', 'CC', 'BBC', 'FC':
+        extractor = File('#Tools/extract_section.py')
+        for scheme in OPT_LEVEL_TO_SCHEMES[optLevel]:
             actual = executable.target_from_source('', '.csi-static-' + scheme)
-            oenv.Command(actual,  (extractor, executable), '$SOURCE --require .debug_' + scheme + ' ${SOURCES[1]} >$TARGET')
+            sectionName = ('__CSI' if __isOSX() else '') + '.debug_%s' % scheme
+            oenv.Command(actual,  (extractor, executable), '$SOURCE --require %s ${SOURCES[1]} >$TARGET' % sectionName)
             passed = oenv.ExpectStaticCSI(actual)
             Alias('test', passed)
 

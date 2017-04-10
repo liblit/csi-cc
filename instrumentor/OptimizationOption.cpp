@@ -20,6 +20,8 @@
 //===----------------------------------------------------------------------===//
 #include "CoveragePassNames.h"
 #include "OptimizationOption.h"
+#include "optionName.h"
+#include "Utils.hpp"
 
 using namespace llvm;
 using namespace std;
@@ -28,15 +30,15 @@ using namespace std;
 csi_inst::OptimizationOption::OptimizationOption(const CoveragePassNames &names, const char descriptionO1[])
   : flag(names.lowerShort + "-opt"),
     description(names.titleFull + " Coverage Optimization Level:"),
-    option(flag.c_str(),
+    option(optionName(flag),
 	   cl::desc(description.c_str()),
 	   cl::init(O2),
 	   cl::values(
 		      clEnumValN(O0, "0", "none"),
 		      clEnumValN(O1, "1", descriptionO1),
 		      clEnumValN(O2, "2", "(default) locally-minimal approximation"),
-		      clEnumValN(O3, "3", "full GAMS-based optimization"),
-		      clEnumValEnd
+		      clEnumValN(O3, "3", "full GAMS-based optimization")
+		      CL_ENUM_VAL_END
 		      )
 	   )
 {

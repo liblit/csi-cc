@@ -88,11 +88,13 @@ void CallCoverage::writeOneCall(CallInst* theCall, unsigned int index,
                                 bool isInstrumented){
   unsigned int lineNum = 0;
   DebugLoc dbLoc = theCall->getDebugLoc();
-  if(!dbLoc.isUnknown())
+  if (!isUnknown(dbLoc))
     lineNum = dbLoc.getLine();
   Function* calledFn = theCall->getCalledFunction();
   const string fnName = calledFn ? calledFn->getName() : "?";
-  infoStream << (isInstrumented ? "" : "-") << index << '|' << lineNum << '|'
+  infoStream << (isInstrumented ? "" : "-") << index << '|'
+             << (isInstrumented ? indexToLabel(index) : "") << '|'
+             << lineNum << '|'
              << fnName << '\n';
 }
 
@@ -128,17 +130,17 @@ void CallCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilde
       
       set<BasicBlock*> allBBs;
       for(Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
-        allBBs.insert(i);
+        allBBs.insert(&*i);
       
       set<BasicBlock*> result;
       if(options.optimizationLevel == OptimizationOption::O2){
         // here: O2
-        // currently using (I=calls, D=calls) for less reliance on LLVM BB costs
+        // NOTE: currently using (I=calls, D=calls) for less reliance on LLVM BB costs
         result = sgData.getOptimizedProbes(&function, &callBBs, &callBBs);
       }
       else{
         // here: O3
-        // currently using (I=calls, D=calls) for less reliance on LLVM BB costs
+        // NOTE: currently using (I=calls, D=calls) for less reliance on LLVM BB costs
 #ifdef USE_GAMS
         result = sgData.getOptimizedProbes(&function, &callBBs, &callBBs, true);
 #else
@@ -180,12 +182,18 @@ void CallCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilde
              !call.getCalledFunction()->isIntrinsic());
 
       // add instrumentation to set local and global coverage bits
-      IRBuilder<> builder(nextInst(&call));
+      IRBuilder<> builder(&*nextInst(&call));
       insertArrayStoreInsts(arrays, curIdx, builder);
     
       // write out the instrumentation site's static location details
       writeOneCall(&call, curIdx++, true);
     }
+  
+  // write out uninstrumented sites
+  unsigned int uninstIdx = 1;
+  for (ExtrinsicCalls<inst_iterator>::iterator call = calls.begin(); call != calls.end(); ++call)
+    if (!fCalls.count(call))
+      writeOneCall(call, uninstIdx++, false);
 }
 
 

@@ -22,7 +22,7 @@
 #ifndef CSI_INFO_FILE_H
 #define CSI_INFO_FILE_H
 
-#include <llvm/Support/CommandLine.h>
+#include "llvm_proxy/CommandLine.h"
 
 #include <fstream>
 #include <string>

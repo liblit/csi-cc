@@ -25,6 +25,7 @@
 #define CSI_COVERAGE_PASS_H
 
 #include "InfoFileOption.h"
+#include "Versions.h"
 
 #include <llvm/Pass.h>
 
@@ -67,7 +68,11 @@ namespace csi_inst
 
     // type used for storing coverage bits
     llvm::Type *tBool;
-    llvm::DIType boolType; 
+#if LLVM_VERSION < 30700
+    llvm::DIType boolType;
+#else
+    llvm::DIType *boolType;
+#endif
 
     CoveragePass(char &, const CoveragePassNames &);
 

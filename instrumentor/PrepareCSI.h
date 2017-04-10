@@ -23,6 +23,8 @@
 #ifndef CSI_INSTRUMENTATION_H
 #define CSI_INSTRUMENTATION_H
 
+#include "PassName.h"
+
 #include <llvm/Pass.h>
 
 #include "llvm_proxy/CFG.h"
@@ -68,7 +70,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   PrepareCSI() : ModulePass(ID) {}
 
-  virtual const char *getPassName() const {
+  virtual PassName getPassName() const {
     return "CSI Preparation for Instrumentation";
   }
   

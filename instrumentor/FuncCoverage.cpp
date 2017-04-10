@@ -66,9 +66,14 @@ void FuncCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilde
   writeFunctionValue(function, theGlobal);
   
   // instrument the function's entry
-  Instruction* insertPoint = function.getEntryBlock().getFirstInsertionPt();
+  Instruction* insertPoint = &*function.getEntryBlock().getFirstInsertionPt();
   new StoreInst(ConstantInt::get(tBool, 1), &theGlobal, false, 1,
-                Unordered, CrossThread, insertPoint);
+#if LLVM_VERSION < 30900
+                Unordered,
+#else
+                AtomicOrdering::Unordered,
+#endif
+                CrossThread, insertPoint);
 }
 
 

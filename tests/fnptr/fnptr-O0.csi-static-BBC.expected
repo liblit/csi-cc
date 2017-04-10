@@ -1,9 +1,9 @@
 #foo|__BBC_arr_tests_fnptr_fnptr_c_foo
-0|4|4|4|4|4
+0|BBC0|4|4|4|4|4
 #bar|__BBC_arr_tests_fnptr_fnptr_c_bar
-0|8|8|8|8|8
+0|BBC0|8|8|8|8|8
 #main|__BBC_arr_tests_fnptr_fnptr_c_main
-0|11|11|11|12|13|14|14|14
-1|15|15
-2|17
-3|18|18|18|18|19|19|20|20
+0|BBC0|11|11|11|12|13|14|14|14
+1|BBC1|15|15
+2|BBC2|17
+3|BBC3|18|18|18|18|19|19|20|20

@@ -1,0 +1,6 @@
+#main|__CC_arr_tests_pi_pi_c_main
+0|CC0|17|printf
+1|CC1|22|rand
+2|CC2|29|printf
+-1||18|scanf
+-2||23|rand

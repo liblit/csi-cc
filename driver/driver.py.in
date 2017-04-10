@@ -30,7 +30,7 @@ from errno import ENOENT
 from inspect import getargspec
 from itertools import chain, imap, starmap
 from os import environ, remove, mkdir
-from os.path import basename, join, splitext
+from os.path import basename, isfile, join, splitext
 from pipes import quote
 from shlex import split
 from subprocess import CalledProcessError, check_call
@@ -556,7 +556,10 @@ class Driver(object):
 
     @staticmethod
     def __llvmBin(command):
-        return join('@LLVM_BINDIR@', command)
+        fullPath = join('@LLVM_BINDIR@', command)
+        if not isfile(fullPath):
+            raise ArgumentError(command, "dependency '%s' is missing. It should be installed with LLVM.")
+        return fullPath
 
     def sourceToBitcodeCommand(self, inputFile, outputFile, args):
         """command line for building bitcode from source code"""

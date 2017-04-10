@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+
+__pychecker__ = 'no-shadowbuiltin'
+
+import os.path
+import platform
+from shutil import rmtree
+from subprocess import check_call, STDOUT
+from sys import argv, exit, path, stderr
+from tempfile import mkdtemp
+
+
+PATH_TO_CSI = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(argv[0]))))
+PATH_TO_CSI_RELEASE = os.path.join(PATH_TO_CSI, "Release")
+PATH_TO_CSI_TOOLS = os.path.join(PATH_TO_CSI, "Tools")
+
+path.insert(1, PATH_TO_CSI_TOOLS)
+from extract_section import getSectionContents
+
+
+def __llvmBin(command):
+    return os.path.join('@LLVM_BINDIR@', command)
+
+def __isOSX():
+    return 'darwin' in platform.system().lower()
+
+def main():
+    if len(argv) != 3:
+        print >>stderr, 'Usage: %s <executable | object-file> <output-file>' % argv[0]
+        exit(1)
+
+    inFile = argv[1]
+    outFile = argv[2]
+
+    sectionName = ('__CSI' if __isOSX() else '') + '.debug_CSI_BC'
+    bc = getSectionContents(inFile, sectionName, True)
+    if bc == None:
+        print >>stderr, 'File %s contains no CSI bitcode section' % inFile
+        exit(1)
+    bcModules = filter(None, bc.split(';; CSI BC SEPARATOR ;;'))
+    if len(bcModules) < 1:
+        print >>stderr, 'File %s contains no CSI bitcode' % inFile
+        exit(1)
+
+    # use a try-finally here (rather than a context manager) to support python2
+    try:
+        scratchDir = mkdtemp()
+
+        moduleFiles = []
+        for (idx, module) in enumerate(bcModules):
+            moduleFiles.append(os.path.join(scratchDir, 'bc_'+str(idx)+'.bc'))
+            with open(moduleFiles[-1], 'wb') as f:
+                f.write(module)
+
+        linkedBc = os.path.join(scratchDir, 'linked_bc.bc')
+        check_call([__llvmBin('llvm-link'), '-o', linkedBc] + moduleFiles)
+
+        optArgs = ['-load']
+        optArgs.append(os.path.join(PATH_TO_CSI_RELEASE, "@SHLIB_PREFIX@" + "CSI" + "@SHLIB_SUFFIX@"))
+        optArgs.append('-cfg-write')
+        optArgs.append('-cfg-file')
+        optArgs.append(outFile)
+        optArgs.append(linkedBc)
+        check_call([__llvmBin('opt')] + optArgs + ['-o', '/dev/null'])
+    finally:
+        rmtree(scratchDir, ignore_errors=True)
+
+
+if __name__ == '__main__':
+    main()

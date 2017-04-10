@@ -87,11 +87,11 @@ void CoverageOptimizationGraph::fillInNodeCost(
   for(Function::const_iterator i = graphFunction->begin(), e = graphFunction->end(); i != e; ++i){
     // get the cost for the basic block
     // NOTE: computed to reduce precision loss due to casts
-    uint64_t myFreq = bf.getBlockFreq(i).getFrequency();
+    uint64_t myFreq = bf.getBlockFreq(&*i).getFrequency();
     uint64_t myWhole = myFreq / freqScaleInt;
     uint64_t myPart = myFreq % freqScaleInt;
     double myScaledFreq = (double)myWhole + (double)myPart / freqScaleDouble;
-    blockCost[i] = myScaledFreq;
+    blockCost[&*i] = myScaledFreq;
   }
 }
 
@@ -99,8 +99,8 @@ void CoverageOptimizationGraph::buildGraphFromFunction(Function* F){
   this->fwdEdges.clear();
 
   for(Function::iterator i = F->begin(), e = F->end(); i != e; ++i){
-    vector<BasicBlock*>& edges = fwdEdges[i];
-    for(succ_iterator s = succ_begin(i), se = succ_end(i); s != se; ++s)
+    vector<BasicBlock*>& edges = fwdEdges[&*i];
+    for(succ_iterator s = succ_begin(&*i), se = succ_end(&*i); s != se; ++s)
       edges.push_back(*s);
   }
   assert(fwdEdges.size() == F->size());

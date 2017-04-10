@@ -1,3 +1,8 @@
+* csi-1.3.0
+
+** Build used for PLDI 2017 conference paper on program analysis.
+** Support for OSX 10.11+
+
 * csi-1.2.0
 
 ** Build used for 2016 ASE conference paper on coverage optimization.

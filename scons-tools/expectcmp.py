@@ -127,20 +127,25 @@ class PTData:
 #
 
 def package_cc_line_data(lineParts):
-  if(len(lineParts) != 3):
-    print >> stderr, ("ERROR: incorrect line formatting in cc file " + line);
+  if(len(lineParts) != 4):
+    print >> stderr, ("ERROR: incorrect line formatting in cc file " + str(lineParts));
     exit(1);
-  lineNum = lineParts[1];
-  calledFn = lineParts[2];
-  return((lineNum, calledFn));
+  isInst = (lineParts[0][0] != '-');
+  lineNum = lineParts[2];
+  calledFn = lineParts[3].replace("__isoc99_scanf", "scanf");
+  return((isInst, lineNum, calledFn));
 #end: package_cc_line_data
 
 def package_bbc_line_data(lineParts):
-  if(len(lineParts) < 2):
-    print >> stderr, ("ERROR: incorrect line formatting in bbc file " + line);
+  if(len(lineParts) < 3):
+    print >> stderr, ("ERROR: incorrect line formatting in bbc file " + str(lineParts));
     exit(1);
-  lineNums = [b[0] for b in groupby(map(int, lineParts[1:]))];
-  return(lineNums);
+  isInst = (lineParts[0][0] != '-');
+  if(len(lineParts) == 3 and lineParts[2].strip() == "NULL"):
+    lineNums = [];
+  else:
+    lineNums = [b[0] for b in groupby(map(int, lineParts[2:]))];
+  return(isInst, lineNums);
 #end: package_bbc_line_data
 
 def read_rt(f, rtType):
@@ -167,12 +172,24 @@ def read_rt(f, rtType):
         funcData = RTData(lineParts[0], lineParts[1]);
         
         # read the data entries for this function
+        uniqueIds = set([]);
         line = fp.readline();
         while(line):
-          if(not line or not line[0].isdigit()):
+          # id number is negative for uninstrumented sites
+          isInstrumented = (line and line[0] != '-');
+
+          if(not line or not (line[0].isdigit() or not isInstrumented)):
             break;
           else:
             lineParts = [x.strip() for x in line.split('|')];
+            lineId = lineParts[1].strip();
+            # ids are non-unique (or completely missing) for uninstrumented
+            if(lineId in uniqueIds and isInstrumented):
+              print >> stderr, ("ERROR: non-unique ID in file " + f);
+              exit(1);
+            else:
+              uniqueIds.add(lineId);
+
             if(rtType == RTType.CC):
               data = package_cc_line_data(lineParts);
             elif(rtType == RTType.BBC):

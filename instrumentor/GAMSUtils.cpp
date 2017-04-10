@@ -363,6 +363,7 @@ void GAMSinterface::writeModelData(const string gdxFile,
   set<string> gamsNodes;
   map<string, double> gamsCost;
   stringstream addrStream; // stream for extracting "names" from basic blocks
+  unsigned long unnamedBlocks = 0; // used to make unique names for unnamed BBs
   for(Function::iterator i = F->begin(), e = F->end(); i != e; ++i){
     // clear the stream from the previous address
     addrStream.str(string());
@@ -372,7 +373,10 @@ void GAMSinterface::writeModelData(const string gdxFile,
     //addrStream << (const void*)(node);
     string fullName = node->getName().str();
     fullName.erase(std::remove(fullName.begin(), fullName.end(), '.'), fullName.end());
-    addrStream << fullName;
+    if(fullName.empty())
+      addrStream << "CSIunnamedblock" << unnamedBlocks++;
+    else
+      addrStream << fullName;
     string nodeName = addrStream.str();
     if(blockNameMap.count(nodeName) || nameBlockMap.count(node))
       report_fatal_error("GAMS error: generated the same name ('" + nodeName +

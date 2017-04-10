@@ -33,8 +33,7 @@ using namespace std;
 
 
 csi_inst::LocalCoveragePass::LocalCoveragePass(char &id, const CoveragePassNames &names)
-  : CoveragePass(id, names),
-    lowerShortName(names.lowerShort)
+  : CoveragePass(id, names)
 {
 }
 
@@ -54,7 +53,11 @@ csi_inst::LocalCoveragePass::CoverageArrays csi_inst::LocalCoveragePass::prepare
   ArrayType * const tArr = ArrayType::get(tBool, arraySize);
 
   // create global coverage array
+#if LLVM_VERSION < 30700
   const DIType arrType = createArrayType(debugBuilder, arraySize, boolType);
+#else
+  DIType * const arrType { createArrayType(debugBuilder, arraySize, boolType) };
+#endif
   GlobalVariable &theGlobal = getOrCreateGlobal(debugBuilder, function, *tArr, arrType, names.upperShort);
   
   // declare the local coverage array and set up debug metadata
@@ -79,7 +82,7 @@ void csi_inst::LocalCoveragePass::insertArrayStoreInsts(const CoverageArrays &ar
   };
 
   Value * const localGEP = builder.CreateInBoundsGEP(&arrays.local, gepIndices, "local"  + names.upperShort);
-  builder.CreateStore(trueValue, localGEP, true);
+  StoreInst * const localStore = builder.CreateStore(trueValue, localGEP, true);
   Value * const globalGEP = builder.CreateInBoundsGEP(&arrays.global, gepIndices, "global" + names.upperShort);
 #if LLVM_VERSION < 30200
   StoreInst * const globalStore = builder.CreateStore(trueValue, globalGEP, false);
@@ -87,8 +90,29 @@ void csi_inst::LocalCoveragePass::insertArrayStoreInsts(const CoverageArrays &ar
 #else
   StoreInst * const globalStore = builder.CreateAlignedStore(trueValue, globalGEP, 1, false);
 #endif
+#if LLVM_VERSION < 30900
   globalStore->setOrdering(Unordered);
+#else
+  globalStore->setOrdering(AtomicOrdering::Unordered);
+#endif
   globalStore->setSynchScope(CrossThread);
+
+  // clear out debug data for instrumentation instructions (so as not to
+  // confuse CFG writing into thinking these are from the original code).
+  // Sadly, it appears there is no way to clear debug data from the IRBuilder.
+  if(Instruction* localGEPInst = dyn_cast<Instruction>(localGEP))
+    localGEPInst->setDebugLoc(DebugLoc());
+  if(Instruction* globalGEPInst = dyn_cast<Instruction>(globalGEP))
+    globalGEPInst->setDebugLoc(DebugLoc());
+  localStore->setDebugLoc(DebugLoc());
+  globalStore->setDebugLoc(DebugLoc());
+
+  attachCSILabelToInstruction(*globalStore, indexToLabel(index));
+}
+
+string csi_inst::LocalCoveragePass::indexToLabel(unsigned int index) const
+{
+  return(names.upperShort + csi_inst::to_string(index));
 }
 
 

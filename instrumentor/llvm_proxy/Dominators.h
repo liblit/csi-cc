@@ -25,7 +25,11 @@
 #include "../Versions.h"
 
 #if LLVM_VERSION < 30500
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+  #pragma GCC diagnostic ignored "-Wunused-parameter"
   #include <llvm/Analysis/Dominators.h>
+  #pragma GCC diagnostic pop
 
 inline void addRequiredDominatorTree(llvm::AnalysisUsage &usage) {
   usage.addRequired<llvm::DominatorTree>();
@@ -40,7 +44,10 @@ inline llvm::DominatorTree &getDominatorTree(llvm::Pass &pass) {
 }
 
 #else
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-parameter"
   #include <llvm/IR/Dominators.h>
+  #pragma GCC diagnostic pop
 
 inline void addRequiredDominatorTree(llvm::AnalysisUsage &usage) {
   usage.addRequired<llvm::DominatorTreeWrapperPass>();

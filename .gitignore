@@ -4,7 +4,8 @@
 .sconsign.dblite
 Release
 config.log
-csi-*.*.*
-csi-*.*.*.tar.gz
+/csi-*.*.*
+/csi-*.*.*.tar.gz
+stamp
 
 **/*.pyc

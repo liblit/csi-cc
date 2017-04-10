@@ -1,8 +1,8 @@
 #main|__CC_arr_tests_loop_loop_c_main
-0|9|rand
-1|11|printf
-2|12|rand
-3|14|printf
-4|17|printf
-5|18|rand
-6|20|printf
+0|CC0|9|rand
+1|CC1|11|printf
+2|CC2|12|rand
+3|CC3|14|printf
+4|CC4|17|printf
+5|CC5|18|rand
+6|CC6|20|printf

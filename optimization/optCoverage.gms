@@ -122,6 +122,8 @@ lambda_eq(alpha, beta, d, I, J)$(triples(alpha, beta, d) and edges(I, J))..
 lambda_flow_eq(alpha, beta, d)$triples(alpha, beta, d)..
   lambda(alpha, beta, d, d) - lambda(alpha, beta, d, beta) =L= 1 - 2 * w(alpha, beta, d);
 
+z.fx(I)$(not can_inst(I)) = 0.0;
+
 
 
 model testModel /all/;

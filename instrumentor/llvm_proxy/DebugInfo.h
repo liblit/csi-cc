@@ -20,6 +20,8 @@
 //===----------------------------------------------------------------------===//
 #include "../Versions.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #if LLVM_VERSION < 30200
   #include <llvm/Analysis/DebugInfo.h>
 #elif LLVM_VERSION < 30500
@@ -27,3 +29,4 @@
 #else
     #include <llvm/IR/DebugInfo.h>
 #endif
+#pragma GCC diagnostic pop

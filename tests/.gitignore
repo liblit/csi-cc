@@ -2,8 +2,9 @@
 */*.csi-static-CC
 */*.csi-static-FC
 */*.csi-static-PT
+*/*.dSYM
 */*.out
 */*.passed
 */*.sym
 */*.o
-*/*-O0
+*/*-O[0-3]

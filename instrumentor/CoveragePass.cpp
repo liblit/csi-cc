@@ -26,6 +26,7 @@
 #include "InfoFileOption.h"
 #include "PrepareCSI.h"
 #include "ScopedDIBuilder.h"
+#include "Utils.hpp"
 
 #include "llvm_proxy/GlobalVariable.h"
 #include "llvm_proxy/Module.h"
@@ -79,11 +80,9 @@ bool csi_inst::CoveragePass::prepareForModule(bool &runBefore, const Module &mod
 
 void csi_inst::CoveragePass::modulePreliminaries(Module &module, DIBuilder &debugBuilder)
 {
-  debugBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-				 module.getModuleIdentifier() + "$" + getPassName(),
-				 "", getPassName(), false, "", 0);
-  boolType = debugBuilder.createBasicType("__" + names.lowerShort + "_bool", 8, 8,
-					  dwarf::DW_ATE_boolean);
+  createCompileUnit(debugBuilder, module, *this);
+  boolType = createBasicType(debugBuilder, "__" + names.lowerShort + "_bool", 8,
+			     dwarf::DW_ATE_boolean);
 
   // the type of bool
   LLVMContext &Context = module.getContext();

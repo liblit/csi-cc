@@ -36,8 +36,8 @@ opts.AddVariables(
 )
 env = Environment(
     options=opts,
-    tools=('default', 'llvm', 'textfile'),
-    toolpath=('instrumentor',),
+    tools=('default', 'llvm', 'textfile', 'unix'),
+    toolpath=('instrumentor', 'scons-tools',),
 )
 opts.Save('.scons-config', env)
 
@@ -83,9 +83,12 @@ SConscript(dirs=[
     'instrumentor',
     'driver',
     'tests',
+    'Tools',
 ])
 
 Default('Release')
+Depends('Release', 'Tools')
+Depends('test', 'Tools')
 
 
 ########################################################################

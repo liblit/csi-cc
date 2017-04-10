@@ -1,2 +1,2 @@
 Import('env')
-env.RunTest('lotsofifs')
+env.RunTest('lotsofifs', optLevels=(0,))

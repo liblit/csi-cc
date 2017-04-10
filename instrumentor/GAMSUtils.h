@@ -23,15 +23,15 @@
 
 #include "CoverageOptimizationGraph.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <gamsxco.hpp>
 #include <gdxco.hpp>
 #include <optco.hpp>
+#pragma GCC diagnostic pop
 
 #include <llvm/Analysis/BlockFrequencyInfo.h>
 
-//#include <cstring>
-//#include <cassert>
-//#include <cstdlib>
 #include <set>
 #include <map>
 

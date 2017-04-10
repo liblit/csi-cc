@@ -42,15 +42,15 @@ set<BasicBlock*> NaiveOptimizationGraph::locallyOptimal(
   BasicBlock* e = this->getEntryBlock();
 
   // for now...though it's possible to find the apropriate subset of D to start
-  DEBUG(dbgs() << "0 / " << I.size() << '\n');
+  DEBUG(dbgs() << "0 / " << to_string(I.size()) << "\n");
   //assert(isCoverageSet(I, D, e, X));
 
   set<BasicBlock*> S = I;
   vector<BasicBlock*> tryRemove = sortBlocksByCost(I);
-  int count = 0;
+  int __attribute__((unused)) count = 0;
   for(vector<BasicBlock*>::const_iterator i = tryRemove.begin(), ie = tryRemove.end(); i != ie; ++i){
     S.erase(*i);
-    DEBUG(dbgs() << ++count << " / " << I.size() << '\n');
+    DEBUG(dbgs() << to_string(++count) << " / " << to_string(I.size()) << "\n");
     DEBUG(dbgs() << "trying to remove " << (*i)->getName().str() << "...\n");
     if(!isCoverageSetClose(S, D, e, X)){
       DEBUG(dbgs() << "'" << (*i)->getName().str() << "' refuted close\n");
@@ -69,7 +69,7 @@ set<BasicBlock*> NaiveOptimizationGraph::locallyOptimal(
 
   // print result...if debugging the pass
   DEBUG(dbgs() << e->getParent()->getName().str()
-               << " Result: " << setBB_asstring(S) << '\n');
+               << " Result: " << setBB_asstring(S) << "\n");
   return(S);
 }
 

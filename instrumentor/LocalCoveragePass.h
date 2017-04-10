@@ -41,9 +41,6 @@ namespace csi_inst
 {
   class LocalCoveragePass : public CoveragePass
   {
-  private:
-    const std::string &lowerShortName;
-
   protected:
     struct Options : public CoveragePass::Options
     {
@@ -62,6 +59,8 @@ namespace csi_inst
 
     CoverageArrays prepareFunction(llvm::Function &, unsigned, const SilentInternalOption &, llvm::DIBuilder &debugBuilder);
     void insertArrayStoreInsts(const CoverageArrays &, unsigned, llvm::IRBuilder<> &) const;
+
+    std::string indexToLabel(unsigned int index) const;
 
   public:
     void getAnalysisUsage(llvm::AnalysisUsage &) const;

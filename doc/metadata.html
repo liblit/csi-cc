@@ -15,13 +15,26 @@
 <h1>CSI Output: Metadata</h1>
 <hr class="half"/>
 <h3>General</h3>
-<p>To extract static instrumentation metadata, use the <kbd>extract-section</kbd> tool in the
-<samp>Tools</samp> directory of this release.  This tool requires the
-following non-standard packages:</p>
+<p>To extract static instrumentation metadata, use the <kbd>extract-cfg</kbd>
+and <kbd>extract-section</kbd> tools in the <samp>Tools</samp> directory of this
+release.  The tools requires the following non-standard packages:</p>
 <ul><li><a href="http://www.python.org/">Python</a> 2.6+</li></ul>
 
-<p>It also requires the application <kbd>objdump</kbd>, which is
+<p>They also require the application <kbd>objdump</kbd>, which is
 standard on most Unix-based operating systems.</p>
+
+<h3>Control-flow Graph</h3>
+<p>CSI embeds the LLVM bitcode necessary to extract an annotated representation
+of the program's control-flow graph from generated object files and executables.
+Note that in the case of multiple object files linked into a single
+executable, the executable contains the complete bitcode necessary to build the
+whole-program control-flow graph.  To extract the graph, use a command similar
+to<br/>
+<kbd class="indent">Tools/extract-cfg <var>myexe</var> <var>output-file</var></kbd></p>
+
+<p>The graph is extracted in
+<a href="http://graphml.graphdrawing.org">GraphML</a> format, with appropriate
+node and edge annotations for running CSI analysis tools.</p>
 
 <h3>Path Tracing</h3>
 <p>Path Tracing metadata is stored as text in the debug
@@ -53,6 +66,17 @@ to<br/>
 
 <p>For details about the format of the Program Coverage metadata, please see the
 <a href="metadata_cc.html">Program Coverage</a> page.</p>
+
+<h3>OSX</h3>
+<p>Section names in Mach-O executables are named slightly differently than those
+in ELF executables.  Specifically, all section names should be preceded by
+<samp>__CSI</samp>.  Thus, the metadata sections above are named as follows:
+<ul>
+<li><samp>__CSI.debug_PT</samp> (for path tracing)</li>
+<li><samp>__CSI.debug_FC</samp> (for function coverage)</li>
+<li><samp>__CSI.debug_CC</samp> (for call coverage)</li>
+<li><samp>__CSI.debug_BBC</samp> (for statement coverage)</li>
+</ul>
 
 <hr/>
 <table class="toptable"><tr>

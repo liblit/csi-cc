@@ -6,5 +6,9 @@ Default(helper)
 driver = env.Substfile('#Release/csi-cc',
                        'csi-driver.py.in',
                        SUBST_DICT={"@USE_GAMS@": str("GAMSDIR" in env),
-                                   "@GAMS_INSTALL_DIR@": env.get("GAMSDIR", "")})
+                                   "@GAMS_INSTALL_DIR@": env.get("GAMSDIR", ""),
+                                   "@SHLIB_PREFIX@": env.subst("$SHLIBPREFIX"),
+                                   "@SHLIB_SUFFIX@": env.subst("$SHLIBSUFFIX"),
+                                   "@OBJCOPY_EXE@": env.subst("$OBJCOPYEXE"),
+                                   "@LLVM_ASSERTIONS@": env.get("LLVM_assertions", False)})
 AddPostAction(driver, Chmod('$TARGET', 0755))

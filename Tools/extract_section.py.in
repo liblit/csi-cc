@@ -1,4 +1,4 @@
-#!/usr/bin/python -O
+#!/usr/bin/env python
 
 __pychecker__ = 'no-shadowbuiltin'
 
@@ -12,7 +12,7 @@ SectionHeader = namedtuple('SectionHeader', ['index', 'name', 'size', 'vma', 'lm
 
 
 def getSectionContents(filename, desiredSection, require=False):
-    objdump = Popen(['objdump', '--section-headers', '--wide', filename], stdout=PIPE)
+    objdump = Popen(['@OBJDUMP_EXE@', '--section-headers', '--wide', filename], stdout=PIPE)
 
     size = offset = None
     for line in objdump.stdout:

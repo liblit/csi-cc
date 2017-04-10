@@ -22,7 +22,15 @@
 #ifndef CSI_VERSIONS_H
 #define CSI_VERSIONS_H
 
-#include <llvm/Config/config.h>
+#include "config.h"
+
+#if LLVM_CONFIG_VERSION < 30900
+// LLVM 3.8 and earlier
+#  include <llvm/Config/config.h>
+#else
+// LLVM 3.9 and later
+#  include <llvm/Config/llvm-config.h>
+#endif
 
 #ifndef LLVM_VERSION_PATCH
 #  define LLVM_VERSION_PATCH 0

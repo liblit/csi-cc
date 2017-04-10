@@ -11,7 +11,7 @@ Preprint: http://pages.cs.wisc.edu/~liblit/ase-journal-2016/ase-journal-2016.pdf
 
 ## Current Release
 
-[`csi-cc` v1.2.0](../../releases/tag/v1.2.0)
+[`csi-cc` v1.3.0](../../releases/tag/v1.3.0)
 
 ## Documentation
 
@@ -20,7 +20,16 @@ Documentation is included in the source download, or you can view the
 
 ## Changelog
 
-###[v. 1.2.0](../../releases/tag/v1.2.0)
+### [v. 1.3.0](../../releases/tag/v1.3.0)
+
+Release associated with the PLDI 2017 paper "Control-Flow Recovery from
+Partial Failure Reports."  Major changes include:
+
+- Support for more recent LLVM releases (through 4.0)
+- Support for OSX 10.11+
+- Tools for extracting annotated control-flow graphs for downstream analyses
+
+### [v. 1.2.0](../../releases/tag/v1.2.0)
 
 Release associated with the ASE 2016 paper "Optimizing Customized Program
 Coverage."  Major changes include:
@@ -29,7 +38,7 @@ Coverage."  Major changes include:
 coverage instrumentation (see the
 [online documentation](https://rawgit.com/liblit/csi-cc/master/doc/running_optimization.html))
 
-###[v. 1.1.0](../../releases/tag/v1.1.0)
+### [v. 1.1.0](../../releases/tag/v1.1.0)
 
 Release associated with the article from the Automated Software Engineering
 journal (2016).  Major changes include:
@@ -38,6 +47,6 @@ journal (2016).  Major changes include:
 - Support for more customizable tracing (see the
 [online documentation](https://rawgit.com/liblit/csi-cc/master/doc/running_schemes.html))
 
-###[v. 1.0.0](../../releases/tag/v1.0.0)
+### [v. 1.0.0](../../releases/tag/v1.0.0)
 
 Initial release.

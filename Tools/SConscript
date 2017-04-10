@@ -1,0 +1,14 @@
+Import('env')
+
+extractor = env.Substfile('extract-cfg.in', \
+                          SUBST_DICT={'@LLVM_BINDIR@': env.subst('$LLVM_bindir'),
+                                      '@SHLIB_PREFIX@': env.subst('$SHLIBPREFIX'),
+                                      '@SHLIB_SUFFIX@': env.subst('$SHLIBSUFFIX')})
+AddPostAction(extractor, Chmod('$TARGET', 0755))
+Default(extractor)
+
+extractor = env.Substfile('extract_section.py.in', \
+                          SUBST_DICT={'@OBJDUMP_EXE@': env.subst('$OBJDUMPEXE')})
+
+AddPostAction(extractor, Chmod('$TARGET', 0755))
+Default(extractor)

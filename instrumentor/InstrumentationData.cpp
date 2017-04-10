@@ -28,23 +28,51 @@ using namespace csi_inst;
 using namespace llvm;
 using namespace std;
 
-static bool hasCallsFilter(const set<string>& scheme, Function* F){
+static bool hasCallsFilter(set<string>& scheme, Function* F){
   if(!scheme.count("CC"))
-    return(true);
+    return(false);
 
   const ExtrinsicCalls<inst_iterator> calls = extrinsicCalls(*F);
-  return(calls.begin() != calls.end());
+  if(calls.begin() == calls.end()) {
+    scheme.erase("CC");
+    return(true);
+  }
+  return(false);
 }
 
-static bool coverageFilter(const set<string>& scheme, Function*){
+static bool coverageFilter(set<string>& scheme, Function*){
   bool hasCC = scheme.count(CallCoverage::names.upperShort);
   bool hasFC = scheme.count(FuncCoverage::names.upperShort);
   bool hasBBC = scheme.count(BBCoverage::names.upperShort);
-  if(hasBBC && (hasFC || hasCC)) return(false);
-  return(true);
+  if(hasBBC && (hasFC || hasCC)) {
+    scheme.erase(CallCoverage::names.upperShort);
+    scheme.erase(FuncCoverage::names.upperShort);
+    return(true);
+  }
+  return(false);
 }
 
-static const FilterFn csi_filters[] = {coverageFilter, hasCallsFilter};
+static bool straightLineFilter(set<string>& scheme, Function* F){
+  if(!scheme.count("PT"))
+    return(false);
+
+  bool removePT = false;
+  if(F->begin() == F->end())
+    removePT = true;
+  else{
+    const BasicBlock* fEntry = &F->getEntryBlock();
+    if(succ_begin(fEntry) == succ_end(fEntry))
+      removePT = true;
+  }
+
+  if(removePT)
+    scheme.erase("PT");
+  return(removePT);
+}
+
+static const FilterFn csi_filters[] = {coverageFilter,
+                                       hasCallsFilter,
+                                       straightLineFilter};
 const vector<FilterFn> csi_inst::Filters(csi_filters,
 					 csi_filters + sizeof(csi_filters) /
 					 sizeof(csi_filters[0]));

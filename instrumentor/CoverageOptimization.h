@@ -24,6 +24,7 @@
 
 #include "CoverageOptimizationGraph.h"
 #include "DominatorOptimizationGraph.h"
+#include "PassName.h"
 
 #include <llvm/Analysis/BlockFrequencyInfo.h>
 #include <llvm/Pass.h>
@@ -69,7 +70,7 @@ public:
   static char ID; // Pass identification, replacement for typeid
   CoverageOptimizationData() : FunctionPass(ID) {}
 
-  virtual const char *getPassName() const {
+  virtual PassName getPassName() const {
     return "CSI coverage optimization analysis";
   }
   

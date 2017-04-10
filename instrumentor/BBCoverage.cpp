@@ -70,7 +70,8 @@ set<BasicBlock*> BBCoverage::getOptimizedInstrumentation(Function& F){
   switch (options.optimizationLevel)
     {
     case OptimizationOption::O1:
-      // same as O2 (we are already at the level of one probe per BB)
+      // this is now equivalent to O2 (since the superblock stuff is no more,
+      // and we only talk about possibly-incomplete executions)
     case OptimizationOption::O2:
       result = sgData.getOptimizedProbes(&F);
       break;
@@ -93,12 +94,17 @@ set<BasicBlock*> BBCoverage::getOptimizedInstrumentation(Function& F){
 
 void BBCoverage::writeOneBB(BasicBlock* theBlock, unsigned int index,
                             bool isInstrumented){
-  infoStream << (isInstrumented?"":"-") << index;
+  infoStream << (isInstrumented?"":"-") << index << '|'
+             << (isInstrumented ? indexToLabel(index) : "");
   
   bool printedOne = false;
   for(BasicBlock::iterator i = theBlock->begin(), e = theBlock->end(); i != e; ++i){
+    if(BranchInst* inst = dyn_cast<BranchInst>(i))
+      if(inst->isUnconditional())
+        continue;
+
     DebugLoc dbLoc = (&*i)->getDebugLoc();
-    if(dbLoc.isUnknown())
+    if (isUnknown(dbLoc))
       continue;
     
     infoStream << "|" << dbLoc.getLine();
@@ -118,7 +124,7 @@ void BBCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilder)
   set<BasicBlock*> fBBs;
   if (options.optimizationLevel == OptimizationOption::O0)
     for (Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
-      fBBs.insert(i);
+      fBBs.insert(&*i);
   else
     fBBs = getOptimizedInstrumentation(function);
   unsigned int arraySize = fBBs.size();
@@ -146,6 +152,12 @@ void BBCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilder)
       // write out the instrumentation site's static location details
       writeOneBB(&block, curIdx++, true);
     }
+  
+  // write out uninstrumented sites
+  unsigned int uninstIdx = 1;
+  for (Function::iterator i = function.begin(), e = function.end(); i != e; ++i)
+    if (!fBBs.count(&*i))
+      writeOneBB(&*i, uninstIdx++, false);
 }
 
 

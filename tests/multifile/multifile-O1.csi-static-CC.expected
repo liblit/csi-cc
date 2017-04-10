@@ -1,0 +1,6 @@
+#main|__CC_arr_tests_multifile_user_c_main
+0|CC0|8|bar
+-1||8|boo
+-2||8|printf
+#bar|__CC_arr_tests_multifile_definer_c_bar
+0|CC0|6|foo

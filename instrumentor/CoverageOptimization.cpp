@@ -31,8 +31,8 @@
 #include "Utils.hpp"
 
 #include <llvm/Support/Debug.h>
-#include <llvm/Support/CommandLine.h>
 
+#include "llvm_proxy/CommandLine.h"
 #include "llvm_proxy/Instructions.h"
 
 #include <iostream>
@@ -70,8 +70,8 @@ static cl::opt<ApproxStyle> ApproximationStyle("opt-approx-style",
                                  clEnumValN(LOCAL, "local",
                                             "(default) basic locally-optimal"),
                                  clEnumValN(LOCAL_WITH_PREPASS, "local-prepass",
-                                            "simple as prepass, then local"),
-                                 clEnumValEnd
+                                            "simple as prepass, then local")
+                                 CL_ENUM_VAL_END
                                )
                             );
 
@@ -181,15 +181,15 @@ set<BasicBlock*> CoverageOptimizationData::getOptimizedProbes(Function* F,
   set<BasicBlock*> fullCan;
   if(canProbe == NULL){
     for(Function::iterator i = F->begin(), e = F->end(); i != e; ++i)
-      fullCan.insert(i);
+      fullCan.insert(&*i);
     canProbe = &fullCan;
   }
   set<BasicBlock*> fullWant;
   if(wantData == NULL){
     for(Function::iterator i = F->begin(), e = F->end(); i != e; ++i){
       // oddball fix: calls to "exit()" sometimes result in unreachable blocks
-      if(pred_begin(i) != pred_end(i) || i == F->getEntryBlock())
-        fullWant.insert(i);
+      if(pred_begin(&*i) != pred_end(&*i) || &*i == &F->getEntryBlock())
+        fullWant.insert(&*i);
     }
     wantData = &fullWant;
   }
@@ -198,14 +198,14 @@ set<BasicBlock*> CoverageOptimizationData::getOptimizedProbes(Function* F,
   set<BasicBlock*> crashPoints;
   if(IncompleteExe){
     for(Function::iterator i = F->begin(), e = F->end(); i != e; ++i)
-      crashPoints.insert(i);
+      crashPoints.insert(&*i);
   }
   else{
     for(Function::iterator i = F->begin(), e = F->end(); i != e; ++i){
-      if(succ_begin(i) == succ_end(i)){
+      if(succ_begin(&*i) == succ_end(&*i)){
         TerminatorInst* terminator = i->getTerminator();
         if(dyn_cast<ReturnInst>(terminator))
-          crashPoints.insert(i);
+          crashPoints.insert(&*i);
         else if(!dyn_cast<UnreachableInst>(terminator))
           report_fatal_error("Coverage optimization encountered terminal "
                              "block that it didn't know how to handle");
@@ -235,8 +235,19 @@ set<BasicBlock*> CoverageOptimizationData::getOptimizedProbes(Function* F,
   return(result);
 }
 
+#if LLVM_VERSION < 30800
+namespace llvm {
+  typedef BlockFrequencyInfo BlockFrequencyInfoWrapperPass;
+}
+#endif
+
 bool CoverageOptimizationData::runOnFunction(Function& F){
-  BlockFrequencyInfo& bf = getAnalysis<BlockFrequencyInfo>();
+  BlockFrequencyInfoWrapperPass& bfPass = getAnalysis<BlockFrequencyInfoWrapperPass>();
+#if LLVM_VERSION < 30800
+  BlockFrequencyInfo& bf = bfPass;
+#else
+  BlockFrequencyInfo& bf = bfPass.getBFI();
+#endif
   DominatorTree& domTree = getDominatorTree(*this);
   this->graph.reset(new NaiveOptimizationGraph(&F, bf));
   this->tree = DominatorOptimizationGraph(&F, bf, domTree);
@@ -247,6 +258,6 @@ bool CoverageOptimizationData::runOnFunction(Function& F){
 // optimization
 void CoverageOptimizationData::getAnalysisUsage(AnalysisUsage& AU) const {
   AU.setPreservesAll();
-  AU.addRequired<llvm::BlockFrequencyInfo>();
+  AU.addRequired<BlockFrequencyInfoWrapperPass>();
   addRequiredDominatorTree(AU);
 }
