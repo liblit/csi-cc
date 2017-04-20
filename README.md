@@ -16,7 +16,7 @@ Preprint: http://pages.cs.wisc.edu/~liblit/ase-journal-2016/ase-journal-2016.pdf
 ## Documentation
 
 Documentation is included in the source download, or you can view the
-[online documentation](https://rawgit.com/liblit/csi-cc/master/doc/index.html).
+[online documentation](https://rawgit.com/pohmann/csi-cc/master/doc/index.html).
 
 ## Changelog
 
@@ -36,7 +36,7 @@ Coverage."  Major changes include:
 
 - Support for various levels of optimization for statement and call-site
 coverage instrumentation (see the
-[online documentation](https://rawgit.com/liblit/csi-cc/master/doc/running_optimization.html))
+[online documentation](https://rawgit.com/pohmann/csi-cc/master/doc/running_optimization.html))
 
 ### [v. 1.1.0](../../releases/tag/v1.1.0)
 
@@ -45,7 +45,7 @@ journal (2016).  Major changes include:
 
 - Support for function, call-site, and statement coverage instrumentation
 - Support for more customizable tracing (see the
-[online documentation](https://rawgit.com/liblit/csi-cc/master/doc/running_schemes.html))
+[online documentation](https://rawgit.com/pohmann/csi-cc/master/doc/running_schemes.html))
 
 ### [v. 1.0.0](../../releases/tag/v1.0.0)
 
