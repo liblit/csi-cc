@@ -29,7 +29,14 @@ level 1, use the following command:<br/>
 Optimization level 2 has two variants, based on the <kbd>-opt-style</kbd> flag.
 Specifically, <kbd>-opt-style=simple</kbd> will use a cheaper dominator-based
 approximation, while <kbd>-opt-style=local-prepass</kbd> (the default) will
-compute a locally-optimal approximation of optimal coverage probe placement.
+compute a locally-optimal approximation of optimal coverage probe placement.<br/>
+Optimization level 3 also has two variants, based on the <kbd>-opt-style</kbd>
+flag.
+Specifically, <kbd>-opt-style=gams</kbd> (the default) will use the older
+optimization style built with the <a href="https://www.gams.com/">GAMS</a>
+modeling system, while <kbd>-opt-style=lemon</kbd> will use the newer
+and more efficient optimization techniques based on Set Covering, per the
+2023 INFORMS JOC article.
 
 The following table specifies the effect of each level of optimization.</p>
 <table class="indent">
@@ -72,6 +79,19 @@ The following table specifies the effect of each level of optimization.</p>
           optimization framework <a href="https://www.gams.com/">GAMS</a> be
           installed on your system.</td>
     </tr>
+    <tr>
+      <th class="nowrap"><kbd>-csi-opt=3<br/>-opt-style=lemon</kbd></th>
+      <td>Fully-optimal call-site coverage instrumentation.
+          Requires that the C++ optimization and graph library
+          <a href="https://lemon.cs.elte.hu/trac/lemon">LEMON</a> and
+          the <a href="https://www.gurobi.com/">GUROBI Optimizer</a>
+          be installed on your system.</td>
+      <td>Fully-optimal statement coverage instrumentation.
+          Requires that the C++ optimization and graph library
+          <a href="https://lemon.cs.elte.hu/trac/lemon">LEMON</a> and
+          the <a href="https://www.gurobi.com/">GUROBI Optimizer</a>
+          be installed on your system.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -87,6 +107,21 @@ follows:</p>
   Call-site coverage [Dominator approximation]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=2 -opt-style=simple</kbd><br/>
   Call-site coverage [Locally optimal]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=2</kbd><br/>
 </p>
+
+<p>The results in the 2023 INFORMS JOC paper are gathered as follows:</p>
+<p class="indent">
+  Statement coverage [Netflow]: <kbd>csi-cc --trace=$CSI_DIR/schemas/bb.schema -csi-opt=3 -opt-style=gams</kbd><br/>
+  Statement coverage [Set-Cover]: <kbd>csi-cc --trace=$CSI_DIR/schemas/bb.schema -csi-opt=3 -opt-style=lemon</kbd><br/>
+  <br/>
+  Call-site coverage [Netflow]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=3 -opt-style=gams</kbd><br/>
+  Call-site coverage [Set-Cover]: <kbd>csi-cc --trace=$CSI_DIR/schemas/cc.schema -csi-opt=3 -opt-style=lemon</kbd><br/>
+</p>
+
+<p>Those gathering detailed performance experiments for a fully-optimal solver
+may find the flag <kbd>-log-stats</kbd> useful.
+For example, for stats shown in the 2023 INFORMS JOC paper using the set-covering
+solver for basic-block coverage, the command would be<br/>
+<kbd class="indent">csi-cc --trace=bb.schema -csi-opt=3 -opt-style=lemon -log-stats</kbd><br/></p>
 
 <p>Finally, the flag <kbd>-complete-exe</kbd> will cause CSI to optimize
 instrumentation such that full coverage data is only guaranteed under the

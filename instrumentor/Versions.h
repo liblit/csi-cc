@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,11 +24,11 @@
 
 #include "config.h"
 
-#if LLVM_CONFIG_VERSION < 30900
-// LLVM 3.8 and earlier
+#if LLVM_CONFIG_VERSION < 30800
+// LLVM 3.7 and earlier
 #  include <llvm/Config/config.h>
 #else
-// LLVM 3.9 and later
+// LLVM 3.8 and later
 #  include <llvm/Config/llvm-config.h>
 #endif
 

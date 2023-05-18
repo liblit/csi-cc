@@ -3,7 +3,7 @@
 // This pass prints the module's CFG to an output file in graphml format.
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ static RegisterPass<CFGWriter> X("cfg-write",
 
 
 string CFGWriter::nodeNameFromData(int functionId, unsigned int nodeId){
-  return(string("n:") + csi_inst::to_string(functionId) + ":" +
+  return(string("n:") + csi_inst::to_string(functionId) + ':' +
          csi_inst::to_string(nodeId));
 }
 
@@ -194,7 +194,7 @@ void CFGWriter::writeNodeFromInstruction(const Instruction& instruction,
 
   string lines = lineFromInstruction(instruction);
   if(!lines.empty())
-    lines = string("(") + lines + ")";
+    lines = string("(") + lines + ')';
 
   string csiLabel = csiLabelFromInstruction(instruction);
 
@@ -222,7 +222,12 @@ string strFromValue(const Type* v){
   return(result);
 }
 
-string fileForFunction(Function& F){
+/**
+ * This pulls out some of the repeated code, but hopefully we can do better
+ * someday and actually return the DISubprogram itself (though the type--pointer
+ * versus reference--seems to differ in earlier LLVM versions).
+ */
+const MDNode* functionToScopeMetadata(Function& F){
   for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i){
     const DebugLoc& dbLoc = i->getDebugLoc();
 #if LLVM_VERSION < 30700
@@ -241,16 +246,61 @@ string fileForFunction(Function& F){
       const DISubprogram * const spPtr { getDISubprogram(instrScope) };
       const DISubprogram& fnMetadata = *spPtr;
 #endif
-      if(fnMetadata.describes(&F)){
-        string fileName = fnMetadata.getFilename().str();
-        if(!fileName.empty() && fileName.at(0) == '/')
-          return(fileName);
-        else
-          return(fnMetadata.getDirectory().str() + "/" + fileName);
-      }
+      if(fnMetadata.describes(&F))
+        return instrScope;
     }
   }
-  return string();
+  return NULL;
+}
+
+string fileForFunction(Function& F){
+  const MDNode* const scopeForF = functionToScopeMetadata(F);
+  if(scopeForF == NULL){
+    return string();
+  }
+  else{
+    assert(scopeForF);
+#if LLVM_VERSION < 30700
+    DISubprogram fnMetadata(scopeForF);
+#else
+    const DISubprogram * const spPtr { getDISubprogram(scopeForF) };
+    const DISubprogram& fnMetadata = *spPtr;
+#endif
+    if(!fnMetadata.describes(&F)){
+      // this is actually a serious return value error, so we'll have to print a
+      // cryptic message, since we're talking debug data here
+      report_fatal_error("internal error: function metadata both does and does "
+                         "not describe function " + F.getName().str());
+    }
+    string fileName = fnMetadata.getFilename().str();
+    if(!fileName.empty() && fileName.at(0) == '/')
+      return(fileName);
+    else
+      return(fnMetadata.getDirectory().str() + '/' + fileName);
+  }
+}
+
+unsigned lineForFunction(Function& F){
+  const MDNode* const scopeForF = functionToScopeMetadata(F);
+  if(scopeForF == NULL){
+    return 0;
+  }
+  else{
+    assert(scopeForF);
+#if LLVM_VERSION < 30700
+    DISubprogram fnMetadata(scopeForF);
+#else
+    const DISubprogram * const spPtr { getDISubprogram(scopeForF) };
+    const DISubprogram& fnMetadata = *spPtr;
+#endif
+    if(!fnMetadata.describes(&F)){
+      // this is actually a serious return value error, so we'll have to print a
+      // cryptic message, since we're talking debug data here
+      report_fatal_error("internal error: function metadata both does and does "
+                         "not describe function " + F.getName().str());
+    }
+    return fnMetadata.getLine();
+  }
 }
 
 
@@ -258,11 +308,12 @@ bool CFGWriter::runOnFunction(Function &F) {
   int functionId = functionToIdMap.at(&F);
 
   // XML comment line (for easier searching in the CFG text)
-  outputStream << "    <!-- cfg " << functionId << " "
+  outputStream << "    <!-- cfg " << functionId << ' '
                << F.getName().str() << " -->\n";
 
-  // use debug data to find the file containing this function
+  // use debug data to find the file and line number containing this function
   string containingFile = fileForFunction(F);
+  unsigned functionLine = lineForFunction(F);
   // this was once an assertion: violated by the following set of functions in
   // source file "config.h" of the "gcc" subject:
   // const_section, tdesc_section, sdata_section, ctors_section, dtors_section
@@ -274,8 +325,8 @@ bool CFGWriter::runOnFunction(Function &F) {
 
   // create entry and exit nodes (edges to/from created later)
   writeNode(functionId, ENTRY_ID, "entry: " + F.getName().str(),
-            "function_entry", "entry", "( 0 )", "", "", containingFile,
-            F.getName().str());
+            "function_entry", "entry", "( " + to_string(functionLine) + " )",
+            "", "", containingFile, F.getName().str());
   writeNode(functionId, EXIT_ID, "exit: " + F.getName().str(),
             "function_exit", "exit", "( 0 )");
 

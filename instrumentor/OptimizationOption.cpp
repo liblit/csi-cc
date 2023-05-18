@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,15 +31,15 @@ csi_inst::OptimizationOption::OptimizationOption(const CoveragePassNames &names,
   : flag(names.lowerShort + "-opt"),
     description(names.titleFull + " Coverage Optimization Level:"),
     option(optionName(flag),
-	   cl::desc(description.c_str()),
-	   cl::init(O2),
-	   cl::values(
-		      clEnumValN(O0, "0", "none"),
-		      clEnumValN(O1, "1", descriptionO1),
-		      clEnumValN(O2, "2", "(default) locally-minimal approximation"),
-		      clEnumValN(O3, "3", "full GAMS-based optimization")
-		      CL_ENUM_VAL_END
-		      )
-	   )
+           cl::desc(description.c_str()),
+           cl::init(O2),
+           cl::values(
+             clEnumValN(O0, "0", "none"),
+             clEnumValN(O1, "1", descriptionO1),
+             clEnumValN(O2, "2", "(default) locally-minimal approximation"),
+             clEnumValN(O3, "3", "fully optimal (GAMS- or LEMON-based) optimization")
+             CL_ENUM_VAL_END
+          )
+     )
 {
 }

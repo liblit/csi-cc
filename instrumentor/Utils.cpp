@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ string csi_inst::setBB_asstring(set<BasicBlock*> theSet){
   string result;
   for(set<BasicBlock*>::iterator i = theSet.begin(), e = theSet.end(); i != e; ++i){
     if(i != theSet.begin())
-      result += ",";
+      result += ',';
     if(*i == NULL)
       result += "NULL";
     else
@@ -99,21 +99,22 @@ string csi_inst::setBB_asstring(set<BasicBlock*> theSet){
 }
 
 
-GlobalVariable &csi_inst::getOrCreateGlobal(DIBuilder &debugBuilder, Function &function,
-					    Type &type,
+GlobalVariable &csi_inst::getOrCreateGlobal(DIBuilder &debugBuilder,
+                                            Function &function,
+                                            Type &type,
 #if LLVM_VERSION < 30700
-					    const DIType &typeInfo,
+                                            const DIType &typeInfo,
 #else
-					    DIType *typeInfo,
+                                            DIType *typeInfo,
 #endif
                                             const string &upperShortName)
 {
   // mangle up a unique name
   const string fName = getUniqueCFunctionName(function);
   const string globalName = "__" + upperShortName + "_arr_" +
-    fName.substr(0, ((fName.find("$") == string::npos)
-		     ? fName.size()
-		     : fName.find("$")));
+    fName.substr(0, ((fName.find('$') == string::npos)
+                     ? fName.size()
+                     : fName.find('$')));
 
   // check for existing global
   Module &module = *function.getParent();
@@ -121,9 +122,11 @@ GlobalVariable &csi_inst::getOrCreateGlobal(DIBuilder &debugBuilder, Function &f
   if (preexisting)
     {
       if (preexisting->getType()->getElementType() != &type)
-	report_fatal_error("unable to get or create coverage global variable for '" + globalName + "' for function '" + function.getName() + "'");
+        report_fatal_error("unable to get or create coverage global variable "
+                           "for '" + globalName + "' for function '" +
+                           function.getName() + "'");
       else
-	return *preexisting;
+        return *preexisting;
     }
 
   // create new global
@@ -229,17 +232,18 @@ DebugLoc csi_inst::findEarlyDebugLoc(const Function &function, bool silent)
     {
       const DebugLoc &location = instruction->getDebugLoc();
       if (!isUnknown(location))
-	{
-	  if (!silent && instruction->getParent() != &function.getEntryBlock())
-	    DEBUG(dbgs() << "WARNING: debug location outside of entry block used "
-		  << "for instrumented function " << function.getName() << '\n');
-	  return location;
-	}
+      {
+        if (!silent && instruction->getParent() != &function.getEntryBlock())
+          DEBUG(dbgs() << "WARNING: debug location outside of entry block used "
+                       << "for instrumented function "
+                       << function.getName() << '\n');
+        return location;
+      }
     }
 
   if (!silent)
     errs() << "WARNING: there will be no debug locations for instrumented"
-	   << " function " << function.getName() << '\n';
+           << " function " << function.getName() << '\n';
   return DebugLoc();
 }
 
@@ -285,13 +289,16 @@ static uint64_t getTypeStoreSize(const Module &module, Type &type)
 }
 
 
-AllocaInst *csi_inst::createZeroedLocalArray(Function &function, ArrayType &arrayType, const string &name, DIBuilder &debugBuilder,
+AllocaInst *csi_inst::createZeroedLocalArray(Function &function,
+                                             ArrayType &arrayType,
+                                             const string &name,
+                                             DIBuilder &debugBuilder,
 #if LLVM_VERSION < 30700
-					     const DIType &elementTypeInfo,
+                                             const DIType &elementTypeInfo,
 #else
-					     DIType *elementTypeInfo,
+                                             DIType *elementTypeInfo,
 #endif
-					     bool silent)
+                                             bool silent)
 {
   // find proper insertion point for new alloca and other supporting instructions
   const BasicBlock::iterator entryInst = function.getEntryBlock().getFirstInsertionPt();
@@ -332,11 +339,26 @@ void csi_inst::attachCSILabelToInstruction(Instruction& inst,
   inst.setMetadata("CSI.label", labelMD);
 }
 
+#if __cplusplus >= 201103L
+
+string csi_inst::to_string(int val) {
+  return std::to_string(val);
+}
+
+string csi_inst::to_string(unsigned int val) {
+  return std::to_string(val);
+}
+
+string csi_inst::to_string(long unsigned int val) {
+  return std::to_string(val);
+}
+
+#else // C++11 or later
+
 namespace csi_inst{
   template<typename T>
   static string to_string(T val){
-    static stringstream theStream;
-    theStream.str(string());
+    ostringstream theStream;
     theStream << val;
     return(theStream.str());
   }
@@ -354,15 +376,24 @@ string csi_inst::to_string(long unsigned int val){
   return(csi_inst::to_string<long unsigned int>(val));
 }
 
+#endif // C++11 or later
+
+string csi_inst::to_string(double val, unsigned int digits){
+  ostringstream formatter;
+  formatter.precision(digits);
+  formatter << val;
+  return formatter.str();
+}
+
 
 void createCompileUnit(llvm::DIBuilder &builder, const llvm::Module &module, const llvm::ModulePass &pass)
 {
   const PassName passName = pass.getPassName();
 #if LLVM_VERSION < 40000
-  const string fileName = module.getModuleIdentifier() + "$" + passName;
+  const string fileName = module.getModuleIdentifier() + '$' + passName;
   builder.createCompileUnit(llvm::dwarf::DW_LANG_C99, fileName, "", passName, false, "", 0);
 #else
-  const auto fileName = (module.getModuleIdentifier() + "$" + passName).str();
+  const auto fileName = (module.getModuleIdentifier() + '$' + passName).str();
   const auto file = builder.createFile(fileName, "");
   builder.createCompileUnit(llvm::dwarf::DW_LANG_C99, file, passName, false, "", 0);
 #endif

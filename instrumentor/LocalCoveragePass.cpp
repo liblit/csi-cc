@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,7 +95,11 @@ void csi_inst::LocalCoveragePass::insertArrayStoreInsts(const CoverageArrays &ar
 #else
   globalStore->setOrdering(AtomicOrdering::Unordered);
 #endif
-  globalStore->setSynchScope(CrossThread);
+#if LLVM_VERSION < 50000
+  globalStore->setSynchScope(SynchronizationScope::CrossThread);
+#else
+  globalStore->setSyncScopeID(SyncScope::System);
+#endif
 
   // clear out debug data for instrumentation instructions (so as not to
   // confuse CFG writing into thinking these are from the original code).

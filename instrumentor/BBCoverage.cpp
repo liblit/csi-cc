@@ -1,11 +1,11 @@
-//===--------------------------- BBCoverage.h -----------------------------===//
+//===-------------------------- BBCoverage.cpp ----------------------------===//
 //
 // This pass instruments basic blocks for interprocedural analysis by
 // gathering both global and local coverage information.
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,19 +76,20 @@ set<BasicBlock*> BBCoverage::getOptimizedInstrumentation(Function& F){
       result = sgData.getOptimizedProbes(&F);
       break;
     case OptimizationOption::O3:
-#ifdef USE_GAMS
+#if defined(USE_GAMS) || defined(USE_LEMON)
       result = sgData.getOptimizedProbes(&F, NULL, NULL, true);
       break;
 #else
       report_fatal_error("csi build does not support optimization level 3. "
-                         "csi must be built with GAMS optimization enabled");
+                         "csi must be built with GAMS or LEMON optimization "
+                         "enabled");
 #endif
     default:
       report_fatal_error("basic block optimization level reached invalid "
                          "point in function '" + F.getName() + "'");
     }
 
-  DEBUG(dbgs() << "instrumenting: " << setBB_asstring(result) << "\n");
+  DEBUG(dbgs() << "instrumenting: " << setBB_asstring(result) << '\n');
   return(result);
 }
 
@@ -107,7 +108,7 @@ void BBCoverage::writeOneBB(BasicBlock* theBlock, unsigned int index,
     if (isUnknown(dbLoc))
       continue;
     
-    infoStream << "|" << dbLoc.getLine();
+    infoStream << '|' << dbLoc.getLine();
     printedOne = true;
   }
   

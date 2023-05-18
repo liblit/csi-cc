@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,9 +48,12 @@ struct BlockCostComparator{
   }
 
   bool operator()(llvm::BasicBlock* first, llvm::BasicBlock* second){
+    // Name ordering here is somewhat arbitrary, but preserved for
+    // backward compatibility with ASE 2016 paper results.
+    // When used with high compiler optimization levels,
+    // we cannot assert that blocks have non-empty names.
     string firstName = first->getName().str();
     string secondName = second->getName().str();
-    assert(!firstName.empty() && !secondName.empty());
 
     double firstCost = graph->getBlockCost(first);
     double secondCost = graph->getBlockCost(second);

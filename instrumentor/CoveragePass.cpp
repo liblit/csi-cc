@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,8 +63,8 @@ bool csi_inst::CoveragePass::prepareForModule(bool &runBefore, const Module &mod
   for (Module::const_iterator i = module.begin(), e = module.end(); i != e; ++i)
     if(instData.hasInstrumentationType(*i, names.upperShort))
       {
-	anyEnabledFuncs = true;
-	break;
+        anyEnabledFuncs = true;
+        break;
       }
 
   // if we don't do any instrumentation, no changes are necessary
@@ -82,7 +82,7 @@ void csi_inst::CoveragePass::modulePreliminaries(Module &module, DIBuilder &debu
 {
   createCompileUnit(debugBuilder, module, *this);
   boolType = createBasicType(debugBuilder, "__" + names.lowerShort + "_bool", 8,
-			     dwarf::DW_ATE_boolean);
+                             dwarf::DW_ATE_boolean);
 
   // the type of bool
   LLVMContext &Context = module.getContext();
@@ -96,8 +96,8 @@ void csi_inst::CoveragePass::instrumentFunctions(Module &module, DIBuilder &debu
   const PrepareCSI& plan = getAnalysis<PrepareCSI>();
   for (Module::iterator function = module.begin(), end = module.end(); function != end; ++function)
     if (!function->isDeclaration() && !function->isIntrinsic() &&
-	!function->getName().substr(0, 5).equals("__PT_") &&
-	plan.hasInstrumentationType(*function, names.upperShort))
+        !function->getName().substr(0, 5).equals("__PT_") &&
+        plan.hasInstrumentationType(*function, names.upperShort))
       instrumentFunction(*function, debugBuilder);
 }
 

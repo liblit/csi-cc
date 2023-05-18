@@ -18,6 +18,10 @@ hr.half {
   width: 50%;
   margin-left: 0;
 }
+hr.minorsep {
+  width: 40%;
+  margin-let: auto;
+}
 ul.contents {
   margin-top: 0;
 }

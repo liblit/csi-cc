@@ -7,7 +7,7 @@
 # instrumenting compilation.
 #====----------------------------------------------------------------------====#
 #
-# Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+# Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ PATH_TO_CSI = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(a
 PATH_TO_CSI_RELEASE = os.path.join(PATH_TO_CSI, "Release")
 PATH_TO_CSI_DRIVER = os.path.join(PATH_TO_CSI, "driver")
 PATH_TO_CSI_GAMS = os.path.join(PATH_TO_CSI, "optimization")
+PATH_TO_CSI_SCHEMAS = os.path.join(PATH_TO_CSI, "schemas")
 
 path.insert(1, PATH_TO_CSI_DRIVER)
 from driver import Driver, InputFile, drive, regexpHandlerTable
@@ -41,8 +42,9 @@ class CSIDriver(Driver):
   __slots__ = "__pathArraySize", "__hashSize", "__silent",\
               "__ptFile", "__ccFile", "__bbcFile",\
               "__fcFile", "__traceFile", "__bitcodeFile",\
-              "__debugPass", "__csiOpt", "__filter",\
-              "__completeExe", "__gamsDir", "__optStyle"
+              "__indirectStyle", "__debugPass", "__csiOpt", "__filter",\
+              "__completeExe", "__gamsDir", "__optStyle", "__verifyResults",\
+              "__useHeuristics", "__logStats"
   
   __pychecker__ = 'unusednames=_flag'
   
@@ -66,13 +68,28 @@ class CSIDriver(Driver):
   
   def __handleNoFilter(self, _flag):
     self.__filter = False
-  
+
+  def __handleVerifyResults(self, _flag):
+    self.__verifyResults = True
+
+  def __handleNoHeuristics(self, _flag):
+    self.__useHeuristics = False
+
+  def __handleLogStats(self, _flag):
+    self.__logStats = True
+
   def __handleSpecificTrace(self, _flag):
-    if not os.path.exists(_flag[8:].strip()):
+    traceFile = os.path.expanduser(_flag[8:].strip())
+    if not os.path.exists(traceFile):
+      traceFile = os.path.join(PATH_TO_CSI_SCHEMAS, traceFile)
+    if not os.path.exists(traceFile):
       print >> stderr, "ERROR: trace file does not exist.  Revise --trace argument."
       exit(1)
     else:
-      self.__traceFile = _flag[8:].strip()
+      self.__traceFile = traceFile
+  
+  def __handleIndirectStyle(self, _flag):
+    self.__indirectStyle = _flag[17:].strip()
   
   def __handleDebugPass(self, _flag):
     if @LLVM_ASSERTIONS@:
@@ -91,6 +108,9 @@ class CSIDriver(Driver):
     "-hash-size"         : __handleHashSize,
     "-complete-exe"      : __handleCompleteExe,
     "-no-filter"         : __handleNoFilter,
+    "-verify-results"    : __handleVerifyResults,
+    "-no-heuristics"     : __handleNoHeuristics,
+    "-log-stats"         : __handleLogStats,
     "--silent"           : __handleSilent,
     "--help"             : __handleFlagGoalHelpCSI,
     "--help-clang"       : __handleFlagGoalHelpClang
@@ -98,6 +118,7 @@ class CSIDriver(Driver):
   
   EXTRA_REGEXP_HANDLERS = regexpHandlerTable(
     ('^(--trace=.+)$', __handleSpecificTrace),
+    ('^(--indirect-style=.+)$', __handleIndirectStyle),
     ('^(-debug-pass=.+)$', __handleDebugPass),
     ('^(-csi-opt=.+)$', __handleCsiOpt),
     ('^(-opt-style=.+)$', __handleOptStyle),
@@ -111,11 +132,15 @@ class CSIDriver(Driver):
     self.__silent = strtobool(environ.get("CSI_SILENT", "0").strip())
     self.__filter = True
     self.__traceFile = None
+    self.__indirectStyle = None
     self.__debugPass = ""
     self.__csiOpt = None
     self.__optStyle = None
     self.__completeExe = False
-  
+    self.__verifyResults = False
+    self.__useHeuristics = True
+    self.__logStats = False
+
   def process(self, args):
     # instrumentation *requires* debug information
     return super(CSIDriver, self).process(['-g'] + args)
@@ -146,6 +171,8 @@ class CSIDriver(Driver):
     if self.__traceFile:
       yield "-csi-variants-file"
       yield self.__traceFile
+    if self.__indirectStyle:
+      yield "-csi-trampoline-style="+self.__indirectStyle
     if not self.__filter:
       yield "-csi-no-filter"
     if self.__silent:
@@ -155,9 +182,15 @@ class CSIDriver(Driver):
     if(not self.__completeExe):
       yield "-opt-incomplete-exe"
     if self.__optStyle:
-      yield "-opt-approx-style="+self.__optStyle
+      if self.__csiOpt == "2":
+        yield "-opt-approx-style="+self.__optStyle
+      elif self.__csiOpt == "3":
+        yield "-opt-full-style="+self.__optStyle
     if self.__debugPass == "coverage-optimization":
+      yield "-debug-only=coverage-optimization"
+    if self.__debugPass == "coverage-optimization" or self.__verifyResults:
       yield "-opt-verify-coverage-set"
+      yield "-opt-verify-optimality"
     if @USE_GAMS@:
       yield "-opt-gams-file"
       yield os.path.join(PATH_TO_CSI_GAMS, "optCoverage.gms")
@@ -171,6 +204,10 @@ class CSIDriver(Driver):
       yield "result.gdx"
       yield "-opt-gams-log-file"
       yield "optlog.lst"
+    if not self.__useHeuristics:
+      yield "-opt-no-heuristics"
+    if self.__logStats:
+      yield "-opt-log-stats"
     
     # path tracing instrumentation
     yield "-pt-inst"
@@ -284,23 +321,56 @@ OVERVIEW: csi-cc instrumenting LLVM compiler
 
 USAGE: csi-cc [options] <inputs>
 
-OPTIONS:
+COMMON OPTIONS:
   --trace=<file>          Use <file> as the input file for the tracing schemes.
                           If this option is not given, the scheme is read from
                           stdin.
   -csi-opt=<arg>          Use <arg> as the optimization level for CSI
                           instrumentation passes.  Legal values are <0,1,2,3>.
                           (Default: 2)
-  -opt-style=<arg>        Use <arg> as the style for CSI optimization level 2.
-                          Legal values are <simple,local,local-prepass>.
-                          (Default: local-prepass)
+  -opt-style=<arg>        Use <arg> as the style for CSI optimization level 2 or
+                          3.
+                          Legal values for level 2: <simple,local,local-prepass>
+                          (Default for level 2: local-prepass)
+                          Legal values for level 3: <gams,lemon>
+                          (Default for level 3: gams, if installed)
+  --silent                Do not print pass-specific warnings during
+                          instrumentation
+  
+  --help                  Display this help message and exit
+  --help-clang            Display additional options (clang's help message) and
+                          exit
+
+OPTIONS FOR DEVELOPMENT OF CSI:
   -debug-pass=<arg>       Enable printing of extremely verbose debug messages
                           for the pass specified as <arg>.  This should
                           generally not be used unless debugging instrumentors.
                           <arg> can be any of the supported instrumentors or
                           'all' (which enables debugging for all passes).
+                          Legal values are
+                          <all,prep,bbc,cc,fc,pt,coverage-optimization>.
                           This option is only available if LLVM is built with
                           assertions enabled.
+  -verify-results         Enables additional verification of computed results
+                          during instrumentation.  For example, this ensures
+                          that all coverage sets are verified during
+                          optimization.  This is an expensive operation.
+  -no-filter              Do not filter tracing schemes.  All schemes provided
+                          will be used verbatim for functions to which they
+                          match.
+  -no-heuristics          Do not use heuristics to improve coverage optimization
+                          performance.  Presently, this has little-to-no impact
+                          on performance in most cases, but should generally
+                          only be used for debugging instrumentors.
+  -log-stats              Logs various statistics about coverage optimization
+                          sets to stdout.  Presently, this is used for research
+                          experiments.
+
+LESS COMMON OPTIONS:
+  --indirect-style=<arg>  Use the provided style for creating indirect
+                          functions, which enables custimization of
+                          instrumentation.  Current styles are {std, ifunc}.
+                          (Default: std)
   -path-array-size <arg>  Use <arg> as the size of path tracing arrays
                           (Default: 10)
   -hash-size <arg>        Use <arg> as the maximum-size function (in number of
@@ -312,15 +382,6 @@ OPTIONS:
                           improve instrumentation efficiency, but may lose
                           information; thus, it should not be used in normal
                           circumstances.
-  -no-filter              Do not filter tracing schemes.  All schemes provided
-                          will be used verbatim for functions to which they
-                          match.
-  --silent                Do not print pass-specific warnings during
-                          instrumentation
-  
-  --help                  Display this help message and exit
-  --help-clang            Display additional options (clang's help message) and
-                          exit
 
 ENVIRONMENT VARIABLES:
   PT_ARRAY_SIZE           See -path-array-size (above).  Flags have precedence.

@@ -26,6 +26,8 @@ specify this by a command like<br/>
 places) for Clang and GCC versions 4.6+.  It is unlikely to build for
 GCC versions before 4.2.</p>
 
+<hr class="minorsep"/>
+
 <p>As noted, LLVM version 3.1 or newer is required.  If LLVM is not installed
 in a standard location, you will probably have to tell scons where to find the
 LLVM configuration helper for your installation.  You can do this by a command
@@ -39,13 +41,26 @@ will likely only happen if you built LLVM from source.  Your configure command
 when building LLVM should look something like<br/>
 <kbd class="indent">configure --enable-shared</kbd></p>
 
+<p>If you intend to use aggressive optimization (see below), you should
+also consider building LLVM with assertions enabled. The flags for this will
+vary with LLVM version, but, as an example, a standard build to use CSI with
+LLVM 4.0 would be:<br/>
+<kbd class="indent">cmake srcdir -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON
+-DLLVM_ENABLE_RTTI=ON -DLLVM_LINK_LLVM_DYLIB=ON</kbd></p>
+
+<hr class="minorsep"/>
+
 <p>CSI is capable of aggressive optimization for program coverage
 instrumentation schemes.  Specifically, if you are hoping to use fully-optimal
 instrumentation for program coverage (see the
 <a href="running_optimization.html">coverage optimization</a> page), you will
-need to build CSI with support for connecting to the
-<a href="https://www.gams.com/">GAMS</a> optimization framework.  Naturally,
-you first need to have <a href="https://www.gams.com/">GAMS</a> installed.
+need to build CSI with support for connecting to one of the following:</p>
+<ul>
+  <li>the <a href="https://www.gams.com/">GAMS</a> optimization framework</li>
+  <li>the <a href="https://www.gurobi.com">GUROBI</a> optimizer AND the
+    <a href="https://lemon.cs.elte.hu/trac/lemon">LEMON</a> graph library</li>
+</ul>
+<p>For the first option, you first need to have <a href="https://www.gams.com/">GAMS</a> installed.
 Then, you can tell CSI where to find your
 <a href="https://www.gams.com/">GAMS</a> installation by a command like<br/>
 <kbd class="indent">scons GAMSDIR=/path/to/GAMS</kbd><br/>
@@ -53,6 +68,16 @@ Note that this path should point to the primary
 <a href="https://www.gams.com/">GAMS</a> installation directory, which contains
 the <kbd>gams</kbd> executable, as well as a subdirectory called
 <kbd>apifiles/</kbd>.</p>
+
+<p>For the second option, you, again, need to up-to-date installations of
+<a href="https://www.gams.com/">GAMS</a> and
+<a href="https://lemon.cs.elte.hu/trac/lemon">LEMON</a>.
+Then, you can tell CSI where to find your installations by a command like<br/>
+<kbd class="indent">scons LEMONDIR=/path/to/lemon GUROBIDIR=/path/to/gurobi</kbd><br/>
+Again, these paths should point to the top-level directories of the installed
+tools, containing subdirectories like <kbd>bin</kbd> and <kbd>include</kbd>.
+
+<hr class="minorsep"/>
 
 <p>If building on OSX, note that many pre-packaged distributions of LLVM do not
 include a full LLVM shared object for linking with CSI.  If you see linker

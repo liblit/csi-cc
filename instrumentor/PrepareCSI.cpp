@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,21 @@
 using namespace csi_inst;
 using namespace llvm;
 using namespace std;
+
+enum IndirectStyle{
+  Std, Ifunc
+};
+static cl::opt<IndirectStyle> TrampolineStyle("csi-trampoline-style",
+   cl::desc("(optional) Trampoline style:"), cl::init(Std),
+   cl::values(
+     clEnumValN(Std, "std", "(default) switch-based dispatcher function"),
+     clEnumValN(Ifunc, "ifunc", "use @gnu_indirect_function attribute "
+                                "(requires glibc 2.11.1+, "
+                                "binutils 2.20.1+, and an unreleased "
+                                "version of LLVM containing r198780)")
+     CL_ENUM_VAL_END
+   )
+);
 
 static cl::opt<bool> SilentInternal("csi-silent", cl::desc("Silence internal "
                                     "warnings.  Will still print errors which "
@@ -149,6 +164,64 @@ Function* PrepareCSI::switchIndirect(Function* F, GlobalVariable* switcher,
   return(F);
 }
 
+Function* PrepareCSI::ifuncIndirect(Function* F, GlobalVariable* switcher,
+                                    vector<Function*>& replicas){
+  F->dropAllReferences();
+  
+  ArrayRef<Type*> newParams;
+  
+  Function* newF = Function::Create(
+     FunctionType::get(F->getFunctionType()->getPointerTo(), newParams, false),
+     F->getLinkage(), F->getName(), F->getParent());
+  
+  // fix up all calls to this function in the module.  They would otherwise be
+  // broken references to the old F.  While this bitcast looks like a no-op,
+  // it will actually end up making all in-module calls to F look like indirect
+  // calls, which has the result of making everything work
+  Constant* replacement = ConstantExpr::getCast(Instruction::BitCast, newF,
+                             F->getFunctionType()->getPointerTo());
+  F->replaceAllUsesWith(replacement);
+
+  newF->takeName(F);
+  newF->getParent()->appendModuleInlineAsm(".type " + newF->getName().str() +
+                                           ", @gnu_indirect_function\x0A");
+  F->eraseFromParent();
+  
+  // set up the switch
+  BasicBlock* newEntry = BasicBlock::Create(*Context, "entry", newF);
+  LoadInst* whichFn = new LoadInst(switcher, "chooseFn", true, newEntry);
+  SwitchInst* callSwitch = NULL;
+  
+  // stuff we need
+  IntegerType* tInt = Type::getInt32Ty(*Context);
+  
+  // create one bb for each possible call (instrumentation scheme)
+  bool aZero = false;
+  for(unsigned int i = 0; i < replicas.size(); ++i){
+    Function* selectF = replicas[i];
+    BasicBlock* bb = BasicBlock::Create(*Context, "call", newF);
+    if(callSwitch == NULL){
+      callSwitch = SwitchInst::Create(whichFn, bb, replicas.size(),
+                                      newEntry);
+    }
+    string funcName = selectF->getName().str();
+    if(funcName.length() > 5 &&
+       funcName.substr(funcName.length()-5, 5) == "$none"){
+      callSwitch->addCase(ConstantInt::get(tInt, 0), bb);
+      aZero = true;
+    }
+    else
+      callSwitch->addCase(ConstantInt::get(tInt, i+1), bb);
+    ReturnInst::Create(*Context, selectF, bb);
+  }
+  // note that we intentionally started numbering the cases from 1 so that the
+  // zero case is reserved for the uninstrumented variant (if there is one)
+  if(!aZero)
+    switcher->setInitializer(ConstantInt::get(tInt, 1));
+  
+  return(newF);
+}
+
 void printScheme(vector<pair<string, set<set<string> > > >& schemeData){
   dbgs() << "------Scheme------\n";
   for(vector<pair<string, set<set<string> > > >::iterator i = schemeData.begin(), e = schemeData.end(); i != e; ++i){
@@ -157,16 +230,16 @@ void printScheme(vector<pair<string, set<set<string> > > >& schemeData){
     for(set<set<string> >::iterator j = entry.second.begin(), je = entry.second.end(); j != je; ++j){
       set<string> jentry = *j;
       if(j != entry.second.begin())
-        dbgs() << ",";
-      dbgs() << "{";
+        dbgs() << ',';
+      dbgs() << '{';
       for(set<string>::iterator k = jentry.begin(), ke = jentry.end(); k != ke; ++k){
         if(k != jentry.begin())
-          dbgs() << ",";
+          dbgs() << ',';
         dbgs() << *k;
       }
-      dbgs() << "}";
+      dbgs() << '}';
     }
-    dbgs() << "\n";
+    dbgs() << '\n';
   }
   dbgs() << "------------------\n";
 }
@@ -301,7 +374,7 @@ bool PrepareCSI::runOnModule(Module &M){
     }
     if(!found){
       errs() << "WARNING: No scheme match found for function '"
-	     << F->getName() << "'.  Skipping.\n";
+             << F->getName() << "'.  Skipping.\n";
       continue;
     }
   }
@@ -330,7 +403,7 @@ bool PrepareCSI::runOnModule(Module &M){
         outs() << "WARNING: filtered scheme '";
         for(set<string>::iterator k = j->begin(), ke = j->end(); k != ke; ++k){
           if(k != j->begin())
-            outs() << ",";
+            outs() << ',';
           outs() << *k;
         }
         outs() << "' for function '" << F->getName().str() << "'\n";
@@ -363,15 +436,15 @@ bool PrepareCSI::runOnModule(Module &M){
         SmallVector<ReturnInst*, 1> returns;
         Function* newF = CloneFunction(F, valueMap,
 #if LLVM_VERSION < 30900
-				       false,
+                                       false,
 #endif
-				       NULL);
+                                       NULL);
 
         string name = F->getName().str();
         if(j->begin() == j->end())
           name += "$none";
         for(set<string>::iterator k = j->begin(), ke = j->end(); k != ke; ++k){
-          name += "$" + *k;
+          name += '$' + *k;
           addInstrumentationType(*newF, *k);
         }
         newF->setName(name);
@@ -396,7 +469,19 @@ bool PrepareCSI::runOnModule(Module &M){
       functionGlobal->setSection("__CSI_func_inst");
 
       // set up the trampoline call for this function
-      switchIndirect(F, functionGlobal, funcReplicas);
+      switch(TrampolineStyle){
+        case Ifunc: if(F->getLinkage() != GlobalValue::InternalLinkage){
+                      // we may be able to change linkage on static functions so
+                      // they can be used with ifunc, but this has the potential
+                      // for name collisions, and the performance impact should
+                      // be negligible in any case
+                      ifuncIndirect(F, functionGlobal, funcReplicas);
+                      break;
+                    }
+                    // intentional fallthrough
+        case Std:   switchIndirect(F, functionGlobal, funcReplicas); break;
+        default:    llvm_unreachable_internal("bad indirect function style value");
+      }
     }
   }
   

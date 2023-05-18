@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -97,4 +97,4 @@ template <typename PassType> void csi_inst::CoveragePass::requireAndPreserve(llv
 }
 
 
-#endif	// !CSI_COVERAGE_PASS_H
+#endif // !CSI_COVERAGE_PASS_H

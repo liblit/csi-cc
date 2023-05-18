@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -557,5 +557,5 @@ set<BasicBlock*> GAMSinterface::optimizeModel (const string gamsFile,
   
   callGams(gamsFile, resultFile, logFile, runDir);
   
-  return(readSolutionData(runDir+"/"+resultFile));
+  return(readSolutionData(runDir + '/' + resultFile));
 }

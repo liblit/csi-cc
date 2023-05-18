@@ -19,6 +19,23 @@
 trying to run the CSI compiler, and some additional information about
 command-line options.</p>
 
+<p>A standard compilation of <samp>csi-cc</samp> should provide, in
+addition to the source file being compiled and any other required
+compilation options for that file:
+<ul>
+  <li>A schema indicating what type of tracing to enable for each function</li>
+  <li>An optimization level for coverage-based tracing (see below for defaults, and the
+    <a href="running_optimization.html">Coverage Optimization</a> page for details on flags)</li>
+</ul>
+For example, to gather call-site coverage for all functions using basic level 1 optimization,
+the command would be<br/>
+<kbd class="indent">csi-cc --trace=cc.schema -csi-opt=1 &lt;input file&gt;</kbd><br/>
+while gathering call-site coverage using one of the fully-optimal instrumentors
+(longer compile times,but less instrumentation required) would be<br/>
+<kbd class="indent">csi-cc --trace=cc.schema -csi-opt=3 -opt-style=lemon &lt;input file&gt;</kbd><br/>
+
+<hr class="minorsep"/>
+
 <p>It’s fine to symlink to the <samp>csi-cc</samp> file, but you
 shouldn’t copy it out.  You can move the entire CSI directory as
 required, but the relative path between the <samp>Release</samp>
@@ -32,25 +49,62 @@ this means that the LLVM version you built with (see
 <a href="building_comments.html">building notes</a> on LLVM_CONFIG)
 does not match the one in your <kbd>PATH</kbd>.</p>
 
+<hr class="minorsep"/>
+
 <p>The full list of CSI-specific options is as follows</p>
 <pre>
 USAGE: csi-cc [options] &lt;inputs&gt;
 
-OPTIONS:
+COMMON OPTIONS:
   --trace=&lt;file&gt;          Use &lt;file&gt; as the input file for the tracing schemes.
                           If this option is not given, the scheme is read from
                           stdin.
   -csi-opt=&lt;arg&gt;          Use &lt;arg&gt; as the optimization level for CSI
                           instrumentation passes.  Legal values are &lt;0,1,2,3&gt;.
                           (Default: 2)
-  -opt-style=&lt;arg&gt;        Use &lt;arg&gt; as the style for CSI optimization level 2.
-                          Legal values are &lt;simple,local,local-prepass&gt;.
-                          (Default: local-prepass)
-  -debug-pass=&lt;arg&gt;       Enable printing of extremely verbose debug messages
+  -opt-style=&lt;arg&gt;        Use &lt;arg&gt; as the style for CSI optimization level 2 or
+                          3.
+                          Legal values for level 2: &lt;simple,local,local-prepass&gt;
+                          (Default for level 2: local-prepass)
+                          Legal values for level 3: &lt;gams,lemon&gt;
+                          (Default for level 3: gams, if installed)
+  --silent                Do not print pass-specific warnings during
+                          instrumentation
+  
+  --help                  Display this help message and exit
+  --help-clang            Display additional options (clang's help message) and
+                          exit
+
+OPTIONS FOR DEVELOPMENT OF CSI:
+  -debug-pass=&lt;arg>       Enable printing of extremely verbose debug messages
                           for the pass specified as &lt;arg&gt;.  This should
                           generally not be used unless debugging instrumentors.
                           &lt;arg&gt; can be any of the supported instrumentors or
                           'all' (which enables debugging for all passes).
+                          Legal values are
+                          &lt;all,prep,bbc,cc,fc,pt,coverage-optimization&gt;.
+                          This option is only available if LLVM is built with
+                          assertions enabled.
+  -verify-results         Enables additional verification of computed results
+                          during instrumentation.  For example, this ensures
+                          that all coverage sets are verified during
+                          optimization.  This is an expensive operation.
+  -no-filter              Do not filter tracing schemes.  All schemes provided
+                          will be used verbatim for functions to which they
+                          match.
+  -no-heuristics          Do not use heuristics to improve coverage optimization
+                          performance.  Presently, this has little-to-no impact
+                          on performance in most cases, but should generally
+                          only be used for debugging instrumentors.
+  -log-stats              Logs various statistics about coverage optimization
+                          sets to stdout.  Presently, this is used for research
+                          experiments.
+
+LESS COMMON OPTIONS:
+  --indirect-style=&lt;arg&gt;  Use the provided style for creating indirect
+                          functions, which enables custimization of
+                          instrumentation.  Current styles are {std, ifunc}.
+                          (Default: std)
   -path-array-size &lt;arg&gt;  Use &lt;arg&gt; as the size of path tracing arrays
                           (Default: 10)
   -hash-size &lt;arg&gt;        Use &lt;arg&gt; as the maximum-size function (in number of
@@ -62,15 +116,6 @@ OPTIONS:
                           improve instrumentation efficiency, but may lose
                           information; thus, it should not be used in normal
                           circumstances.
-  -no-filter              Do not filter tracing schemes.  All schemes provided
-                          will be used verbatim for functions to which they
-                          match.
-  --silent                Do not print pass-specific warnings during
-                          instrumentation
-  
-  --help                  Display this help message and exit
-  --help-clang            Display additional options (clang's help message) and
-                          exit
 
 ENVIRONMENT VARIABLES:
   PT_ARRAY_SIZE           See -path-array-size (above).  Flags have precedence.

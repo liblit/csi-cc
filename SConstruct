@@ -27,6 +27,14 @@ opts.AddVariables(
                  help='path to GAMS installation directory',
                  default=None,
                  validator=PathVariable.PathIsDir),
+    PathVariable(key='LEMONDIR',
+                 help='path to LEMON installation directory.  Requires GUROBIDIR',
+                 default=None,
+                 validator=PathVariable.PathIsDir),
+    PathVariable(key='GUROBIDIR',
+                 help='path to GUROBI installation directory',
+                 default=None,
+                 validator=PathVariable.PathIsDir),
     BoolVariable(key='DEBUG',
                  help='Compile with extra information for debugging',
                  default=False),
@@ -40,6 +48,10 @@ env = Environment(
     toolpath=('instrumentor', 'scons-tools',),
 )
 opts.Save('.scons-config', env)
+
+if env.get('LEMONDIR', None) and not env.get('GUROBIDIR', None):
+    print 'Must specify both LEMONDIR and GUROBIDIR'
+    Exit(1)
 
 ########################################################################
 #

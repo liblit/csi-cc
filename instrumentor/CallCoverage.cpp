@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,9 +65,10 @@ set<CallInst*> CallCoverage::selectCalls(const set<BasicBlock*>& bbs)
     {
       const ExtrinsicCalls<BasicBlock::iterator> calls = extrinsicCalls(**bb);
       if (calls.begin() != calls.end())
-	result.insert(calls.begin());
+        result.insert(calls.begin());
       else
-	report_fatal_error("attempt to select a call instruction in basic block '" + (*bb)->getName() + "' which has none");
+        report_fatal_error("attempt to select a call instruction in basic "
+                           "block '" + (*bb)->getName() + "' which has none");
     }
   return result;
 }
@@ -141,15 +142,16 @@ void CallCoverage::instrumentFunction(Function &function, DIBuilder &debugBuilde
       else{
         // here: O3
         // NOTE: currently using (I=calls, D=calls) for less reliance on LLVM BB costs
-#ifdef USE_GAMS
+#if defined(USE_GAMS) || defined(USE_LEMON)
         result = sgData.getOptimizedProbes(&function, &callBBs, &callBBs, true);
 #else
         report_fatal_error("csi build does not support optimization level 3. "
-                           "csi must be built with GAMS optimization enabled");
+                           "csi must be built with GAMS or LEMON optimization "
+                           "enabled");
 #endif
       }
 
-      DEBUG(dbgs() << "instrumenting: " << setBB_asstring(result) << "\n");
+      DEBUG(dbgs() << "instrumenting: " << setBB_asstring(result) << '\n');
 
       fCalls = selectCalls(result);
       if(fCalls.size() != result.size())

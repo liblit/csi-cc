@@ -3,7 +3,7 @@
 # Utility functions to verify LLVM installation and version.
 #====----------------------------------------------------------------------====#
 #
-# Copyright (c) 2013 Peter J. Ohmann and Benjamin R. Liblit
+# Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

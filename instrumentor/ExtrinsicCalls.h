@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ namespace csi_inst
   {
   public:
     ExtrinsicCalls(const InstructionIterator &begin,
-		   const InstructionIterator &end);
+                   const InstructionIterator &end);
 
     class iterator
     {
@@ -76,7 +76,7 @@ namespace csi_inst
 
 template <typename InstructionIterator>
 csi_inst::ExtrinsicCalls<InstructionIterator>::iterator::iterator(const InstructionIterator &current,
-								  const InstructionIterator &end)
+                                                                  const InstructionIterator &end)
   : current(current),
     end(end)
 {
@@ -152,7 +152,7 @@ void csi_inst::ExtrinsicCalls<InstructionIterator>::iterator::advance()
 
 template <typename InstructionIterator>
 csi_inst::ExtrinsicCalls<InstructionIterator>::ExtrinsicCalls(const InstructionIterator &begin,
-							      const InstructionIterator &end)
+                                                              const InstructionIterator &end)
   : begin_(begin, end),
     end_(end, end)
 {

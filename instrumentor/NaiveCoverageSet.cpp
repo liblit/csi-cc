@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,10 +74,6 @@ bool csi_inst::isCoverageSet(const set<BasicBlock*>& S,
         if(*d == *beta)
           continue;
         else if(hasAmbiguousTriangle(*alpha, *beta, *d, e, X, S)){
-          DEBUG(dbgs() << "alpha = " << (*alpha)->getName().str() << ";"
-                       << "beta = " << (*beta)->getName().str() << ";"
-                       << "d = " << (*d)->getName().str() << "\n");
-          DEBUG(dbgs() << "S = " << setBB_asstring(S) << "\n");
           return(false);
         }
       }
@@ -112,10 +108,6 @@ bool csi_inst::isCoverageSetClose(const set<BasicBlock*>& S,
         if(*d == *beta)
           continue;
         else if(hasAmbiguousTriangle(*alpha, *beta, *d, e, X, S)){
-          DEBUG(dbgs() << "alpha = " << (*alpha)->getName().str() << ";"
-                       << "beta = " << (*beta)->getName().str() << ";"
-                       << "d = " << (*d)->getName().str() << "\n");
-          DEBUG(dbgs() << "S = " << setBB_asstring(S) << "\n");
           return(false);
         }
       }
@@ -193,7 +185,6 @@ bool csi_inst::hasAmbiguousTriangle(BasicBlock* alpha,
                                     const set<BasicBlock*>& S){
   set<BasicBlock*> X_minus_d = X;
   X_minus_d.erase(d);
-  DEBUG(dbgs() << "X\\d = " << setBB_asstring(X_minus_d) << "\n");
 
   set<BasicBlock*> Y1 = connectedExcluding(set<BasicBlock*>(&e, &e+1),
                                            set<BasicBlock*>(&alpha, &alpha+1),
@@ -201,15 +192,8 @@ bool csi_inst::hasAmbiguousTriangle(BasicBlock* alpha,
   set<BasicBlock*> Y2 = connectedExcluding(set<BasicBlock*>(&beta, &beta+1),
                                            X_minus_d,
                                            set<BasicBlock*>(&d, &d+1));
-  if(Y1.empty() || Y2.empty()){
-    DEBUG(dbgs() << "Y1 = " << setBB_asstring(Y1) << "; "
-                 << "Y2 = " << setBB_asstring(Y2) << " for: "
-                 << "alpha = " << alpha->getName().str() << "; "
-                 << "beta = " << beta->getName().str() << "; "
-                 << "d = " << d->getName().str()
-                 << "\n");
+  if(Y1.empty() || Y2.empty())
     return(false);
-  }
   
   // here, we would compute the Y set, but all we actually care about is S\Y
   set<BasicBlock*> S_minus_Y = S;
@@ -217,11 +201,6 @@ bool csi_inst::hasAmbiguousTriangle(BasicBlock* alpha,
     S_minus_Y.erase(*i);
   for(set<BasicBlock*>::iterator i = Y2.begin(), ie = Y2.end(); i != ie; ++i)
     S_minus_Y.erase(*i);
-  DEBUG(dbgs() << "S\\Y = " << setBB_asstring(S_minus_Y) << "; "
-               << "alpha = " << alpha->getName().str() << "; "
-               << "beta = " << beta->getName().str() << "; "
-               << "d = " << d->getName().str()
-               << "\n");
 
   if(!isConnectedExcluding(set<BasicBlock*>(&alpha, &alpha+1),
                            set<BasicBlock*>(&d, &d+1), S_minus_Y))
@@ -235,6 +214,11 @@ bool csi_inst::hasAmbiguousTriangle(BasicBlock* alpha,
                            set<BasicBlock*>(&beta, &beta+1), S_minus_Y))
     return(false);
 
+  DEBUG(dbgs() << "Found triangle: (" << alpha->getName().str() << ", "
+               << beta->getName().str() << ","
+               << d->getName().str() << ")\n");
+  DEBUG(dbgs() << "With S = " << setBB_asstring(S)
+               << "\nand S\\Y = " << setBB_asstring(S_minus_Y) << "\n");
   return(true);
 }
 

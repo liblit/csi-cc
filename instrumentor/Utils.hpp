@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,8 +74,8 @@ inline llvm::BasicBlock::iterator prevInst(llvm::Instruction* const instruction)
 
   // get or create a global variable with the specified parameters
   llvm::GlobalVariable &getOrCreateGlobal(llvm::DIBuilder &, llvm::Function &,
-					  llvm::Type &, const llvm::DIType &,
-					  const std::string &upperShortName);
+                                          llvm::Type &, const llvm::DIType &,
+                                          const std::string &upperShortName);
 
   llvm::DIType createArrayType(llvm::DIBuilder &, uint64_t count, const llvm::DIType &elementType);
 
@@ -99,8 +99,8 @@ inline llvm::BasicBlock::iterator prevInst(llvm::Instruction* const instruction)
 
   // get or create a global variable with the specified parameters
   llvm::GlobalVariable &getOrCreateGlobal(llvm::DIBuilder &, llvm::Function &,
-					  llvm::Type &, llvm::DIType *,
-					  const std::string &upperShortName);
+                                          llvm::Type &, llvm::DIType *,
+                                          const std::string &upperShortName);
 
   llvm::DIType *createArrayType(llvm::DIBuilder &, uint64_t count, llvm::DIType *elementType);
 
@@ -118,6 +118,7 @@ inline llvm::BasicBlock::iterator prevInst(llvm::Instruction* const instruction)
   std::string to_string(int val);
   std::string to_string(unsigned int val);
   std::string to_string(long unsigned int val);
+  std::string to_string(double val, unsigned int digits=2);
 
 } // end csi_inst namespace
 

@@ -11,14 +11,26 @@ Preprint: http://pages.cs.wisc.edu/~liblit/ase-journal-2016/ase-journal-2016.pdf
 
 ## Current Release
 
-[`csi-cc` v1.3.0](../../releases/tag/v1.3.0)
+[`csi-cc` v1.4.0](../../releases/tag/v1.4.0)
 
 ## Documentation
 
 Documentation is included in the source download, or you can view the
-[online documentation](https://rawgit.com/pohmann/csi-cc/master/doc/index.html).
+[online documentation](https://pohmann.github.io/csi-cc).
 
 ## Changelog
+
+### [v. 1.4.0](../../releases/tag/v1.4.0)
+
+Release associated with the 2023 INFORMS JOC paper
+"A Set Covering Approach to Customized Coverage Instrumentation."
+Major changes include:
+
+- Support for more LLVM releases (through 7.0)
+- A new, more efficient optimal coverage solver ("LEMON"), as proposed in
+the paper
+- Support for the GNU Indirect Function attribute for run-time selection
+among tracing schemes, as referenced in Peter Ohmann's PhD dissertation
 
 ### [v. 1.3.0](../../releases/tag/v1.3.0)
 

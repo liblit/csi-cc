@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,8 +74,8 @@ static const FilterFn csi_filters[] = {coverageFilter,
                                        hasCallsFilter,
                                        straightLineFilter};
 const vector<FilterFn> csi_inst::Filters(csi_filters,
-					 csi_filters + sizeof(csi_filters) /
-					 sizeof(csi_filters[0]));
+                                         csi_filters + sizeof(csi_filters) /
+                                                       sizeof(csi_filters[0]));
 
 static const string csi_inst_arr[] = {
   BBCoverage::names.upperShort,
@@ -84,5 +84,5 @@ static const string csi_inst_arr[] = {
   "PT"
 };
 const set<string> csi_inst::Instrumentors(csi_inst_arr,
-					  csi_inst_arr + sizeof(csi_inst_arr) /
-					  sizeof(csi_inst_arr[0]));
+                                          csi_inst_arr + sizeof(csi_inst_arr) /
+                                                         sizeof(csi_inst_arr[0]));

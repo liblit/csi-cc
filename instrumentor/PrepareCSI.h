@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ private:
   std::map<const llvm::Function*, std::set<std::string> > functionSchemes;
 #endif
   
-  // create the trampoline function
+  // functions to create the trampoline function
   // NOTE: this returns a function which is now F (but as a trampoline).  The
   // return value may or may not be F, and, in fact, it is possible after this
   // call that F no longer exists.  All future references to F should be changed
@@ -62,6 +62,9 @@ private:
   llvm::Function* switchIndirect(llvm::Function* F,
                                  llvm::GlobalVariable* switcher,
                                  std::vector<llvm::Function*>& replicas);
+  llvm::Function* ifuncIndirect(llvm::Function* F,
+                                llvm::GlobalVariable* switcher,
+                                std::vector<llvm::Function*>& replicas);
   
   // Analyzes all functions, duplicates, and creates the dispatcher
   bool runOnModule(llvm::Module &M);

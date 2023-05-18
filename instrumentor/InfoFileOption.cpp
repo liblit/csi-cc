@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,8 +39,8 @@ csi_inst::InfoFileOption::InfoFileOption(const CoveragePassNames &names)
     flag(names.lowerShort + "-info-file"),
     description("The path to the " + names.lowerFull + " coverage info file."),
     option(optionName(flag),
-	   cl::desc(description.c_str()),
-	   cl::value_desc("file_path"))
+           cl::desc(description.c_str()),
+           cl::value_desc("file_path"))
 {
 }
 

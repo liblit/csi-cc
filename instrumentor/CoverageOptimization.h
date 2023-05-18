@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ private:
   // build the optimization data for this function
   bool runOnFunction(llvm::Function &F);
 
-#ifdef USE_GAMS
+#if defined(USE_GAMS) || defined(USE_LEMON)
   // the full variant of coverage optimization.  Calls out to the GAMS
   // optimization framework
   std::set<llvm::BasicBlock*> getOptimizedProbes_full(
@@ -88,7 +88,7 @@ public:
   std::set<llvm::BasicBlock*> getOptimizedProbes(llvm::Function* F,
      std::set<llvm::BasicBlock*>* I = NULL,
      std::set<llvm::BasicBlock*>* D = NULL
-#ifdef USE_GAMS
+#if defined(USE_GAMS) || defined(USE_LEMON)
      , bool fullOptimization = false
 #endif
   ) const;

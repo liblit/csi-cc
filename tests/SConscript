@@ -79,7 +79,7 @@ def RunTest(self, basename, sources=None, optLevels=DEFAULT_OPT_LEVELS):
         # run execution test
         inputFile = basename + '.in'
         outputFile = executable.target_from_source('', '.out')
-        oenv.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >&$TARGET')
+        oenv.Command(outputFile, (executable, inputFile), '$SOURCE < ${SOURCES[1]} >$TARGET 2>&1')
         expectOut = oenv.ExpectExact(outputFile)
         Alias('test', expectOut)
 

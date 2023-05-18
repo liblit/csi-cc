@@ -1,3 +1,6 @@
-*.os
-compile_commands.json
-config.h
+/*.os
+/compile_commands.json
+/config.h
+*.dwo
+/#*
+/.#*

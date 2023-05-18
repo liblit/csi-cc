@@ -3,7 +3,7 @@
 # Utility functions to get various configuration details from Unix utilities.
 #====----------------------------------------------------------------------====#
 #
-# Copyright (c) 2017 Peter J. Ohmann and Benjamin R. Liblit
+# Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,16 +21,23 @@ from SCons.Script import *
 from distutils.version import StrictVersion
 
 import os.path
+import platform
 
 
 def check_obj(context, toolName):
     fullToolName = 'obj%s' % toolName
     context.Message('Checking for %s...' % fullToolName)
-    objPath = context.env.WhereIs(fullToolName)
+
+    toolsToTry = [fullToolName, 'g%s' % fullToolName]
+    if 'darwin' in platform.system().lower():
+        # on OSX, prefer gobjcopy
+        toolsToTry.reverse()
+
+    objPath = context.env.WhereIs(toolsToTry[0])
     if not objPath:
-        objPath = context.env.WhereIs('g%s' % fullToolName)
+        objPath = context.env.WhereIs(toolsToTry[1])
     if not objPath:
-        context.Result("No %s or g%s found" % (fullToolName, fullToolName))
+        context.Result("No %s or %s found" % tuple(toolsToTry))
         Exit(1)
     context.Result(objPath)
     context.env['%sEXE' % fullToolName.upper()] = objPath

@@ -9,7 +9,7 @@
 //  http://portal.acm.org/citation.cfm?id=243857
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -640,7 +640,7 @@ void PathTracing::insertCounterIncrement(Value* incValue,
 
     GetElementPtrInst* pcPointer =
       GetElementPtrInst::CreateInBounds(dag->getCounterArray(), gepIndices,
-					"arrLoc", &*insertPoint);
+                                        "arrLoc", &*insertPoint);
 
     // Store back in to the array
     new StoreInst(incValue, pcPointer, true, &*insertPoint);
@@ -855,8 +855,8 @@ bool PathTracing::splitCritical(BLInstrumentationEdge* edge,
 
 // NOTE: could handle inlining specially here if desired.
 static void writeBBLineNums(BasicBlock* bb,
-			    BLInstrumentationDag* dag,
-			    raw_ostream& stream = outs()){
+                            BLInstrumentationDag* dag,
+                            raw_ostream& stream = outs()){
   if(!bb){
     stream << "|NULL";
     return;
@@ -990,6 +990,14 @@ void PathTracing::writeTrackerInfo(Function& F, BLInstrumentationDag* dag){
 }
 
 
+static AllocaInst *createAllocaInst(Type *type, const Twine &name, Instruction *insertBefore)
+{
+  return new AllocaInst(type,
+#if LLVM_VERSION >= 50000
+			0,
+#endif
+			name, insertBefore);
+}
 
 
 // Entry point of the function
@@ -1034,10 +1042,10 @@ bool PathTracing::runOnFunction(Function &F) {
 
     // declare the path index and array
     Instruction* entryInst = F.getEntryBlock().getFirstNonPHI();
-    AllocaInst* arrInst = new AllocaInst(tArr, "__PT_pathArr", entryInst);
-    AllocaInst* idxInst = new AllocaInst(tInt, "__PT_arrIndex", entryInst);
+    AllocaInst* arrInst = createAllocaInst(tArr, "__PT_pathArr", entryInst);
+    AllocaInst* idxInst = createAllocaInst(tInt, "__PT_arrIndex", entryInst);
     new StoreInst(ConstantInt::get(tInt, 0), idxInst, true, entryInst);
-    Instruction* trackInst = new AllocaInst(tInt, "__PT_curPath", entryInst);
+    Instruction* trackInst = createAllocaInst(tInt, "__PT_curPath", entryInst);
     new StoreInst(ConstantInt::get(tInt, 0), trackInst, true, entryInst);
     
     // Store the setinal value (-1) into pathArr[end]
@@ -1045,8 +1053,10 @@ bool PathTracing::runOnFunction(Function &F) {
       Constant::getNullValue(Type::getInt64Ty(*Context)),
       ConstantInt::get(tInt, PATHS_SIZE-1),
     };
-    GetElementPtrInst* arrLast = GetElementPtrInst::CreateInBounds(arrInst, gepIndices,
-								   "arrLast", entryInst);
+    GetElementPtrInst* arrLast = GetElementPtrInst::CreateInBounds(arrInst,
+                                                                   gepIndices,
+                                                                   "arrLast",
+                                                                   entryInst);
     new StoreInst(ConstantInt::get(tInt, -1), arrLast, true, entryInst);
     
     dag.setCounterArray(arrInst);
@@ -1080,9 +1090,9 @@ bool PathTracing::runOnFunction(Function &F) {
 #endif
       const Info arrDI = createAutoVariable(
                             Builder,
-			    scope,
+                            scope,
                             "__PT_counter_arr",
-			    file, 0, arrType, true);
+                            file, 0, arrType, true);
       insertDeclare(Builder, arrInst, arrDI, dbLoc, entryInst);
       const Info idxDI = createAutoVariable(
                             Builder,

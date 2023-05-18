@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright (c) 2016 Peter J. Ohmann and Benjamin R. Liblit
+// Copyright (c) 2023 Peter J. Ohmann and Benjamin R. Liblit
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ set<BasicBlock*> NaiveOptimizationGraph::locallyOptimal(
   BasicBlock* e = this->getEntryBlock();
 
   // for now...though it's possible to find the apropriate subset of D to start
-  DEBUG(dbgs() << "0 / " << to_string(I.size()) << "\n");
+  DEBUG(dbgs() << "0 / " << to_string(I.size()) << '\n');
   //assert(isCoverageSet(I, D, e, X));
 
   set<BasicBlock*> S = I;
@@ -50,26 +50,25 @@ set<BasicBlock*> NaiveOptimizationGraph::locallyOptimal(
   int __attribute__((unused)) count = 0;
   for(vector<BasicBlock*>::const_iterator i = tryRemove.begin(), ie = tryRemove.end(); i != ie; ++i){
     S.erase(*i);
-    DEBUG(dbgs() << to_string(++count) << " / " << to_string(I.size()) << "\n");
+    DEBUG(dbgs() << to_string(++count) << " / " << to_string(I.size()) << '\n');
     DEBUG(dbgs() << "trying to remove " << (*i)->getName().str() << "...\n");
     if(!isCoverageSetClose(S, D, e, X)){
-      DEBUG(dbgs() << "'" << (*i)->getName().str() << "' refuted close\n");
+      DEBUG(dbgs() << '\'' << (*i)->getName().str() << "' refuted close\n");
       S.insert(*i);
       continue;
     }
-    DEBUG(dbgs() << "closest not good enough...\n");
     if(!isCoverageSet(S, D, e, X)){
-      DEBUG(dbgs() << "'" << (*i)->getName().str() << "' refuted far\n");
+      DEBUG(dbgs() << '\'' << (*i)->getName().str() << "' refuted far\n");
       S.insert(*i);
     }
     else{
-      DEBUG(dbgs() << "OK! Removed " << "'" << (*i)->getName().str() << "'\n");
+      DEBUG(dbgs() << "OK! Removed '" << (*i)->getName().str() << "'\n");
     }
   }
 
   // print result...if debugging the pass
   DEBUG(dbgs() << e->getParent()->getName().str()
-               << " Result: " << setBB_asstring(S) << "\n");
+               << " Result: " << setBB_asstring(S) << '\n');
   return(S);
 }
 
